@@ -9,6 +9,9 @@ This application enables easily converting topographic data into a series of ima
 2. Run this application, selecting which regions to rasterize.
 3. (optional) Run the provided PowerShell scripts to post-process the output data into a single image.
 
+## Downloads
+TODO create 
+
 ### Export
 [QGIS](https://www.qgis.org/en/site/) is an excellent geographical software tool for importing topographic data from the [National Map](https://viewer.nationalmap.gov/advanced-viewer/) or elsewhere. However, the rasterization functionality of this tool is too limited for the generation of 3D prints.
 
@@ -30,4 +33,7 @@ To 3D print a terrain map, the greyscale image needs to be converted into an STL
 The STL file can then be 3D printed using your toolchain of choice.
 
 ## Example
-TODO, show the process from start-to-finish for the Hawaii terrain.
+[Workflow Example](.\Example.md)
+
+## Compilation / Dependencies
+[Building from the source](.\Building.md)

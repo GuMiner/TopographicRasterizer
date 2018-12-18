@@ -15,13 +15,13 @@
 #include "ContourTiler.h"
 
 #ifndef _DEBUG
-    #pragma comment(lib, "lib/sfml-system")
-    #pragma comment(lib, "lib/sfml-window")
-    #pragma comment(lib, "lib/sfml-graphics")
+    #pragma comment(lib, "../lib/sfml-system")
+    #pragma comment(lib, "../lib/sfml-window")
+    #pragma comment(lib, "../lib/sfml-graphics")
 #else
-    #pragma comment(lib, "lib/sfml-system-d")
-    #pragma comment(lib, "lib/sfml-window-d")
-    #pragma comment(lib, "lib/sfml-graphics-d")
+    #pragma comment(lib, "../lib/sfml-system-d")
+    #pragma comment(lib, "../lib/sfml-window-d")
+    #pragma comment(lib, "../lib/sfml-graphics-d")
 #endif
 
 const char* RasterFolder = "madison_rasters";

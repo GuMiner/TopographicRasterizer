@@ -1,69 +1,38 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
-    <Filter Include="Header Files">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
-    </Filter>
-    <Filter Include="Resource Files">
-      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
-    </Filter>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="CloseContourRanker.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="Rasterizer.h" />
+    <ClInclude Include="Quadtree.h" />
+    <ClInclude Include="QuadExclusions.h" />
+    <ClInclude Include="LineStripLoader.h" />
+    <ClInclude Include="ContourTiler.h" />
+    <ClInclude Include="ColorMapper.h" />
+    <ClInclude Include="CloseContourRanker.h" />
+    <ClInclude Include="Settings.h" />
+    <ClInclude Include="Point.h">
+      <Filter>dto</Filter>
     </ClInclude>
-    <ClInclude Include="ColorMapper.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="Index.h">
+      <Filter>dto</Filter>
     </ClInclude>
-    <ClInclude Include="ContourTiler.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Definitions.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="LineStripLoader.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="QuadExclusions.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Quadtree.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Rasterizer.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="LineStrip.h">
+      <Filter>dto</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ContourTiler.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="CloseContourRanker.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="ColorMapper.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="LineStripLoader.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="QuadExclusions.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Quadtree.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Rasterizer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="stb_implementations.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
+    <ClCompile Include="CloseContourRanker.cpp" />
+    <ClCompile Include="ColorMapper.cpp" />
+    <ClCompile Include="ContourTiler.cpp" />
+    <ClCompile Include="LineStripLoader.cpp" />
+    <ClCompile Include="QuadExclusions.cpp" />
+    <ClCompile Include="Quadtree.cpp" />
+    <ClCompile Include="Rasterizer.cpp" />
+    <ClCompile Include="stb_implementations.cpp" />
+    <ClCompile Include="Settings.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="dto">
+      <UniqueIdentifier>{ed3bced4-ce96-400a-9ce1-baa6e1bc0f0d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>

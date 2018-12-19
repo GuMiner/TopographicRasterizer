@@ -5,9 +5,9 @@
 #include <future>
 #include <string>
 #include "ColorMapper.h"
-#include "Definitions.h"
 #include "LineStripLoader.h"
 #include "Rasterizer.h"
+#include "Settings.h"
 
 struct ViewOptions
 {
@@ -33,9 +33,9 @@ class ContourTiler
     sf::RectangleShape exclusionShape;
     bool hideExclusionShape;
 
-    decimal leftOffset;
-    decimal topOffset;
-    decimal effectiveSize;
+    double leftOffset;
+    double topOffset;
+    double effectiveSize;
 
     double minElevation, maxElevation;
     double* rasterizationBuffer;
@@ -79,5 +79,5 @@ public:
     virtual ~ContourTiler();
 
     // Runs the game loop.
-    void Run();
+    void Run(Settings* settings);
 };

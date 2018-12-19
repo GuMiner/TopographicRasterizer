@@ -1,6 +1,5 @@
+#include <cmath>
 #include "CloseContourRanker.h"
-
-
 
 CloseContourRanker::CloseContourRanker()
     : closestLine(CloseContourLine()), secondClosestLine(CloseContourLine()), thirdClosestLine(CloseContourLine())
@@ -9,7 +8,7 @@ CloseContourRanker::CloseContourRanker()
 
 bool CloseContourRanker::ResortIfIdentical(CloseContourLine contourLine)
 {
-    if (closestLine.elevationId == contourLine.elevationId)
+    if (std::abs(closestLine.elevation - contourLine.elevation) < 0.001f)
     {
         // Identical, resorting done.
         if (contourLine.distanceSqd < closestLine.distanceSqd)
@@ -19,7 +18,7 @@ bool CloseContourRanker::ResortIfIdentical(CloseContourLine contourLine)
 
         return true;
     }
-    else if (secondClosestLine.elevationId == contourLine.elevationId)
+    else if (std::abs(secondClosestLine.elevation - contourLine.elevation) < 0.001f)
     {
         if (contourLine.distanceSqd < secondClosestLine.distanceSqd)
         {
@@ -36,7 +35,7 @@ bool CloseContourRanker::ResortIfIdentical(CloseContourLine contourLine)
 
         return true;
     }
-    else if (thirdClosestLine.elevationId == contourLine.elevationId)
+    else if (std::abs(thirdClosestLine.elevation - contourLine.elevation) < 0.001f)
     {
         if (contourLine.distanceSqd < thirdClosestLine.distanceSqd)
         {
@@ -76,7 +75,7 @@ void CloseContourRanker::AddElevationToRank(const CloseContourLine& contourLine)
     // Not identical, figure out if it we need to insert this contour line anywhere.
 
     // Handle each contour sequentially, filling it in automatically if empty.
-    if (closestLine.elevationId == -1)
+    if (!closestLine.populated)
     {
         closestLine.CopyFrom(contourLine);
         return;
@@ -90,7 +89,7 @@ void CloseContourRanker::AddElevationToRank(const CloseContourLine& contourLine)
         return;
     }
 
-    if (secondClosestLine.elevationId == -1)
+    if (!secondClosestLine.populated)
     {
         secondClosestLine.CopyFrom(contourLine);
         return;
@@ -103,7 +102,7 @@ void CloseContourRanker::AddElevationToRank(const CloseContourLine& contourLine)
         return;
     }
 
-    if (thirdClosestLine.elevationId == -1 || contourLine.distanceSqd < thirdClosestLine.distanceSqd)
+    if (!thirdClosestLine.populated || contourLine.distanceSqd < thirdClosestLine.distanceSqd)
     {
         thirdClosestLine.CopyFrom(contourLine);
         return;
@@ -112,32 +111,32 @@ void CloseContourRanker::AddElevationToRank(const CloseContourLine& contourLine)
 
 bool CloseContourRanker::FilledSufficientLines() const
 {
-    return closestLine.elevationId != -1 && secondClosestLine.elevationId != -1; // && thirdClosestLine.elevationId != -1;
+    return closestLine.populated && secondClosestLine.populated;
 }
 
-decimal CloseContourRanker::GetWeightedElevation() const
+double CloseContourRanker::GetWeightedElevation() const
 {
     // We're guaranteed to have something in the closest line, but nothing in the other two.
-    decimal elevation = 0;
-    decimal inverseWeights = 0;
+    double elevation = 0;
+    double inverseWeights = 0;
 
     // Double the sqrt for a less drastic flow.
-    decimal distCL = closestLine.distanceSqd;
+    double distCL = closestLine.distanceSqd;
     elevation += closestLine.elevation / distCL;
-    inverseWeights += (decimal)1.0 / distCL;
+    inverseWeights += 1.0 / distCL;
 
-    if (secondClosestLine.elevationId != -1)
+    if (secondClosestLine.populated)
     {
         distCL = secondClosestLine.distanceSqd;
         elevation += secondClosestLine.elevation / distCL;
-        inverseWeights += (decimal)1.0 / distCL;
+        inverseWeights += 1.0 / distCL;
     }
 
-    if (thirdClosestLine.elevationId != -1)
+    if (thirdClosestLine.populated)
     {
         distCL = thirdClosestLine.distanceSqd;
         elevation += thirdClosestLine.elevation / distCL;
-        inverseWeights += (decimal)1.0 / distCL;
+        inverseWeights += 1.0 / distCL;
     }
 
     return elevation / inverseWeights;

@@ -20,8 +20,8 @@ Rasterizer::Rasterizer(LineStripLoader* lineStripLoader, QuadExclusions* quadExc
 sf::Vector2i Rasterizer::GetQuadtreeSquare(Point givenPoint)
 {
     return sf::Vector2i(
-        std::min((int)(givenPoint.x * (decimal)size + (decimal)toggle), size - 1),
-        std::min((int)(givenPoint.y * (decimal)size + (decimal)toggle), size - 1));
+        std::min((int)(givenPoint.x * (double)size + toggle), size - 1),
+        std::min((int)(givenPoint.y * (double)size + toggle), size - 1));
 }
 
 void Rasterizer::Setup()
@@ -61,17 +61,17 @@ void Rasterizer::Setup()
 }
 
 // Same as the above but treats the index as a line.
-decimal Rasterizer::GetLineDistanceSqd(Index idx, Point point)
+double Rasterizer::GetLineDistanceSqd(Index idx, Point point)
 {
     Point& start = lineStrips->lineStrips[idx.stripIdx].points[idx.pointIdx];
     Point& end = lineStrips->lineStrips[idx.stripIdx].points[idx.pointIdx + 1];
 
     Point startToEnd(end.x - start.x, end.y - start.y);
-    decimal startEndLengthSqd = pow(startToEnd.x, 2) + pow(startToEnd.y, 2);
+    double startEndLengthSqd = pow(startToEnd.x, 2) + pow(startToEnd.y, 2);
 
     // Taking the dot product of the start-to-point vector with the (normalized) start-to-end vector.
     Point startToPoint(point.x - start.x, point.y - start.y);
-    decimal projectionFraction = (startToPoint.x * startToEnd.x + startToPoint.y * startToEnd.y) / startEndLengthSqd;
+    double projectionFraction = (startToPoint.x * startToEnd.x + startToPoint.y * startToEnd.y) / startEndLengthSqd;
 
     if (projectionFraction > 0 && projectionFraction < 1)
     {
@@ -84,88 +84,6 @@ decimal Rasterizer::GetLineDistanceSqd(Index idx, Point point)
     }
 
     return pow(end.x - point.x, 2) + pow(end.y - point.y, 2);
-
-    /*__m128 start;
-    start.m128_f32[0] = lineStrips->lineStrips[idx.stripIdx].points[idx.pointIdx].x;
-    start.m128_f32[1] = lineStrips->lineStrips[idx.stripIdx].points[idx.pointIdx].y;
-
-    __m128 end;
-    end.m128_f32[0] = lineStrips->lineStrips[idx.stripIdx].points[idx.pointIdx + 1].x;
-    end.m128_f32[1] = lineStrips->lineStrips[idx.stripIdx].points[idx.pointIdx + 1].y;
-
-    __m128 pt;
-    pt.m128_f32[0] = point.x;
-    pt.m128_f32[1] = point.y;
-
-    __m128 startToEnd = _mm_sub_ps(start, end);
-    __m128 startEndLengthSqd = _mm_mul_ps(startToEnd, startToEnd);
-    startEndLengthSqd.m128_f32[0] += startEndLengthSqd.m128_f32[1];
-    startEndLengthSqd.m128_f32[1] = startEndLengthSqd.m128_f32[0];
-
-    // Taking the dot product of the start-to-point vector with the (normalized) start-to-end vector.
-    __m128 startToPoint = _mm_sub_ps(pt, start);
-    __m128 projectionFraction = _mm_mul_ps(startToPoint, startToEnd);
-    projectionFraction.m128_f32[0] += projectionFraction.m128_f32[1];
-    projectionFraction.m128_f32[1] = projectionFraction.m128_f32[0];
-
-    projectionFraction = _mm_div_ps(projectionFraction, startEndLengthSqd);
-
-    if (projectionFraction.m128_f32[0] > 0 && projectionFraction.m128_f32[0] < 1)
-    {
-        __m128 closestPoint = _mm_sub_ps(_mm_add_ps(start, _mm_mul_ps(startToEnd, projectionFraction)), pt);
-        closestPoint = _mm_mul_ps(closestPoint, closestPoint);
-        return closestPoint.m128_f32[0] + closestPoint.m128_f32[1];
-
-    }
-    else if (projectionFraction.m128_f32[0] < 0)
-    {
-        startToPoint = _mm_mul_ps(startToPoint, startToPoint);
-        return start.m128_f32[0] + start.m128_f32[1];
-    }
-
-    end = _mm_sub_ps(end, pt);
-    end = _mm_mul_ps(end, end);
-    return end.m128_f32[0] + end.m128_f32[1];*/
-
-    /*// Loads start into the first two bytes, end into the next two.
-    __m128 start = _mm_loadu_ps(&(lineStrips->lineStrips[idx.stripIdx].points[idx.pointIdx].x));
-
-    __m128 end;
-    end.m128_f32[0] = lineStrips->lineStrips[idx.stripIdx].points[idx.pointIdx + 1].x;
-    end.m128_f32[1] = lineStrips->lineStrips[idx.stripIdx].points[idx.pointIdx + 1].y;
-    end.m128_f32[2] = 0;
-    end.m128_f32[3] = 0;
-
-    __m128 pt;
-    pt.m128_f32[0] = point.x;
-    pt.m128_f32[1] = point.y;
-    pt.m128_f32[2] = point.x;
-    pt.m128_f32[3] = point.y;
-
-    __m128 startToEnd = _mm_sub_ps(start, end);
-    __m128 startEndLengthSqd = _mm_mul_ps(startToEnd, startToEnd);
-    startEndLengthSqd = _mm_set1_ps(startEndLengthSqd.m128_f32[0] + startEndLengthSqd.m128_f32[1]);
-
-    // Taking the dot product of the start-to-point vector with the (normalized) start-to-end vector.
-    __m128 startToPoint = _mm_sub_ps(pt, start);
-    __m128 projectionFraction = _mm_mul_ps(startToPoint, startToEnd);
-    projectionFraction = _mm_set1_ps(projectionFraction.m128_f32[0] + projectionFraction.m128_f32[1]);
-    projectionFraction = _mm_div_ps(projectionFraction, startEndLengthSqd);
-
-    if (projectionFraction.m128_f32[0] > 0 && projectionFraction.m128_f32[0] < 1)
-    {
-        __m128 closestPoint = _mm_sub_ps(_mm_add_ps(start, _mm_mul_ps(startToEnd, projectionFraction)), pt);
-        closestPoint = _mm_mul_ps(closestPoint, closestPoint);
-        return closestPoint.m128_f32[0] + closestPoint.m128_f32[1];
-    }
-    else if (projectionFraction.m128_f32[0] < 0)
-    {
-        startToPoint = _mm_mul_ps(startToPoint, startToPoint);
-        return start.m128_f32[0] + start.m128_f32[1];
-    }
-
-    startToPoint = _mm_mul_ps(startToPoint, startToPoint);
-    return end.m128_f32[2] + end.m128_f32[3];*/
 }
 
 void Rasterizer::AddIfValid(int xP, int yP, std::vector<sf::Vector2i>& searchQuads)
@@ -199,7 +117,7 @@ void Rasterizer::AddAreasToSearch(int distance, sf::Vector2i startQuad, std::vec
     }
 }
 
-decimal Rasterizer::FindClosestPoint(Point point)
+double Rasterizer::FindClosestPoint(Point point)
 {
     sf::Vector2i quadSquare = GetQuadtreeSquare(point);
 
@@ -233,14 +151,14 @@ decimal Rasterizer::FindClosestPoint(Point point)
                 Index index = quadtree.GetIndexFromQuad(searchQuads[k], (int)i);
                 
                 nextLine.distanceSqd = GetLineDistanceSqd(index, point);
-                nextLine.elevation = (decimal)lineStrips->lineStrips[index.stripIdx].elevation;
+                nextLine.elevation = (double)lineStrips->lineStrips[index.stripIdx].elevation;
                 if (nextLine.distanceSqd < 1e-12)
                 {
                     return nextLine.elevation;
                 }
 
                 // Add to the ranker, which manages priority of lines.
-                nextLine.elevationId = lineStrips->lineStrips[index.stripIdx].elevationId;
+                nextLine.populated = true;
                 contourRanker.AddElevationToRank(nextLine);
                 foundAPoint = true;
             }
@@ -264,17 +182,17 @@ decimal Rasterizer::FindClosestPoint(Point point)
 }
 
 // Rasterizes a range of columns to improve perf.
-void Rasterizer::RasterizeColumnRange(decimal leftOffset, decimal topOffset, decimal effectiveSize, int startColumn, int columnCount, double** rasterStore, double* minElevation, double* maxElevation)
+void Rasterizer::RasterizeColumnRange(double leftOffset, double topOffset, double effectiveSize, int startColumn, int columnCount, double** rasterStore, double* minElevation, double* maxElevation)
 {
     for (int i = startColumn; i < startColumn + columnCount; i++)
     {
         for (int j = 0; j < size; j++)
         {
-            decimal x = leftOffset + ((decimal)i / (decimal)size) * effectiveSize;
-            decimal y = topOffset + ((decimal)j / (decimal)size) * effectiveSize;
+            double x = leftOffset + ((double)i / (double)size) * effectiveSize;
+            double y = topOffset + ((double)j / (double)size) * effectiveSize;
 
             Point point(x, y);
-            decimal elevation = FindClosestPoint(point);
+            double elevation = FindClosestPoint(point);
             (*rasterStore)[i + j * size] = elevation;
 
             // Avoid scaling based on the exclusion lists.
@@ -301,7 +219,7 @@ void Rasterizer::RasterizeColumnRange(decimal leftOffset, decimal topOffset, dec
     std::cout << "Thread from " << startColumn << " to " << (startColumn + columnCount) << " complete." << std::endl;
 }
 
-void Rasterizer::Rasterize(decimal leftOffset, decimal topOffset, decimal effectiveSize, double** rasterStore, double& minElevation, double& maxElevation)
+void Rasterizer::Rasterize(double leftOffset, double topOffset, double effectiveSize, double** rasterStore, double& minElevation, double& maxElevation)
 {
     minElevation = std::numeric_limits<double>::max();
     maxElevation = std::numeric_limits<double>::min();
@@ -347,15 +265,15 @@ void Rasterizer::Rasterize(decimal leftOffset, decimal topOffset, decimal effect
 }
 
 // Rasterizes a range of lines to improve perf.
-void Rasterizer::RasterizeLineColumnRange(decimal leftOffset, decimal topOffset, decimal effectiveSize, int startColumn, int columnCount, double** rasterStore)
+void Rasterizer::RasterizeLineColumnRange(double leftOffset, double topOffset, double effectiveSize, int startColumn, int columnCount, double** rasterStore)
 {
     for (int i = startColumn; i < startColumn + columnCount; i++)
     {
         for (int j = 0; j < size; j++)
         {
-            decimal x = leftOffset + ((decimal)i / (decimal)size) * effectiveSize;
-            decimal y = topOffset + ((decimal)j / (decimal)size) * effectiveSize;
-            decimal wiggleDistSqd = pow(effectiveSize / (decimal)size, 2);
+            double x = leftOffset + ((double)i / (double)size) * effectiveSize;
+            double y = topOffset + ((double)j / (double)size) * effectiveSize;
+            double wiggleDistSqd = pow(effectiveSize / (double)size, 2);
 
             Point point(x, y);
             sf::Vector2i quadSquare = GetQuadtreeSquare(point);
@@ -365,7 +283,7 @@ void Rasterizer::RasterizeLineColumnRange(decimal leftOffset, decimal topOffset,
             {
                 Index index = quadtree.GetIndexFromQuad(quadSquare, (int)k);
 
-                decimal lineDistSqd = GetLineDistanceSqd(index, point);
+                double lineDistSqd = GetLineDistanceSqd(index, point);
                 if (lineDistSqd < wiggleDistSqd)
                 {
                     filled = true;
@@ -385,7 +303,7 @@ void Rasterizer::RasterizeLineColumnRange(decimal leftOffset, decimal topOffset,
     std::cout << "Thread from " << startColumn << " to " << (startColumn + columnCount) << " complete." << std::endl;
 }
 
-void Rasterizer::LineRaster(decimal leftOffset, decimal topOffset, decimal effectiveSize, double** rasterStore)
+void Rasterizer::LineRaster(double leftOffset, double topOffset, double effectiveSize, double** rasterStore)
 {
     // This could also be parallelized.
     std::cout << "Line Rasterizing..." << std::endl;
@@ -409,8 +327,4 @@ void Rasterizer::LineRaster(decimal leftOffset, decimal topOffset, decimal effec
     }
 
     std::cout << "Rasterization complete." << std::endl;
-}
-
-Rasterizer::~Rasterizer()
-{
 }

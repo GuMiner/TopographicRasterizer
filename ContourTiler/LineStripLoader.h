@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
-#include "Definitions.h"
+#include "LineStrip.h"
+#include "Settings.h"
 
 class LineStripLoader
 {
@@ -8,7 +9,7 @@ public:
     LineStripLoader();
 
     std::vector<LineStrip> lineStrips;
-    bool Initialize(std::string lineStripFilename);
+    bool Initialize(Settings* settings);
 
     virtual ~LineStripLoader();
 };

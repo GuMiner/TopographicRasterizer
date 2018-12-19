@@ -13,6 +13,7 @@
 #include <SFML/Graphics.hpp>
 #include <stb/stb_image_write.h>
 #include "ContourTiler.h"
+#include "Settings.h"
 
 #ifndef _DEBUG
     #pragma comment(lib, "../lib/sfml-system")
@@ -28,7 +29,7 @@ const char* RasterFolder = "madison_rasters";
 
 ContourTiler::ContourTiler()
     : lineStripLoader(), quadExclusions(), size(1000), regionSize(10), rasterizer(&lineStripLoader, &quadExclusions, size), minElevation(0), maxElevation(1), rasterizationBuffer(new double[size * size]), linesBuffer(new double[size * size]), coverBuffer(new bool[size * size]),
-      leftOffset((decimal)0.0), topOffset((decimal)0.0), effectiveSize((decimal)1.0), mouseStart(-1, -1), mousePos(-1, -1), isRendering(false), isZoomMode(true),
+      leftOffset((double)0.0), topOffset((double)0.0), effectiveSize((double)1.0), mouseStart(-1, -1), mousePos(-1, -1), isRendering(false), isZoomMode(true),
       rerender(false), viewOptions(), hideExclusionShape(false), isBulkProcessing(false), regionX(0), regionY(0)
 { }
 
@@ -88,8 +89,8 @@ void ContourTiler::HandleEvents(sf::RenderWindow& window, bool& alive)
             }
             else if (event.key.code == sf::Keyboard::A)
             {
-                decimal x = leftOffset + (mousePos.x / (decimal)size) * effectiveSize;
-                decimal y = topOffset + (mousePos.y / (decimal)size) * effectiveSize;
+                double x = leftOffset + (mousePos.x / (double)size) * effectiveSize;
+                double y = topOffset + (mousePos.y / (double)size) * effectiveSize;
 
                 sf::Vector2i point(std::min((int)(x * size), size - 1), std::min((int)(y * size), size - 1));
                 bool exclusionStatus = quadExclusions.ToggleExclusion(point);
@@ -175,17 +176,17 @@ void ContourTiler::HandleEvents(sf::RenderWindow& window, bool& alive)
             // Update for the zoom rectangle and exclusion shape.
             mousePos = sf::Vector2i(event.mouseMove.x, event.mouseMove.y);
 
-            decimal x = leftOffset + (mousePos.x / (decimal)size) * effectiveSize;
-            decimal y = topOffset + (mousePos.y / (decimal)size) * effectiveSize;
+            double x = leftOffset + (mousePos.x / (double)size) * effectiveSize;
+            double y = topOffset + (mousePos.y / (double)size) * effectiveSize;
             std::cout << x << "--" << y << std::endl;
 
             sf::Vector2i point(std::min((int)(x * size), size - 1), std::min((int)(y * size), size - 1));
             sf::Vector2i nextPoint(point.x + 1, point.y + 1);
 
-            decimal startX = ((((decimal)point.x / (decimal)size) - leftOffset) / effectiveSize) * size;
-            decimal startY = ((((decimal)point.y / (decimal)size) - topOffset) / effectiveSize) * size;
-            decimal endX = ((((decimal)nextPoint.x / (decimal)size) - leftOffset) / effectiveSize) * size;
-            decimal endY = ((((decimal)nextPoint.y / (decimal)size) - topOffset) / effectiveSize) * size;
+            double startX = ((((double)point.x / (double)size) - leftOffset) / effectiveSize) * size;
+            double startY = ((((double)point.y / (double)size) - topOffset) / effectiveSize) * size;
+            double endX = ((((double)nextPoint.x / (double)size) - leftOffset) / effectiveSize) * size;
+            double endY = ((((double)nextPoint.y / (double)size) - topOffset) / effectiveSize) * size;
 
             sf::Vector2f size(sf::Vector2f(std::abs(startX - endX), std::abs(startY - endY)));
             exclusionShape.setPosition(sf::Vector2f(startX, startY));
@@ -203,10 +204,10 @@ void ContourTiler::HandleEvents(sf::RenderWindow& window, bool& alive)
                     if (isZoomMode)
                     {
                         // We have a valid zoom-in. Determine the new bounding box. However, we want a proper scaling factor.
-                        decimal scalingFactor = std::min(((decimal)(xNew - mouseStart.x) / (decimal)size), ((decimal)(yNew - mouseStart.y / (decimal)size)));
+                        double scalingFactor = std::min(((double)(xNew - mouseStart.x) / (double)size), ((double)(yNew - mouseStart.y / (double)size)));
 
-                        leftOffset += ((decimal)mouseStart.x / (decimal)size) * effectiveSize;
-                        topOffset += ((decimal)mouseStart.y / (decimal)size) * effectiveSize;
+                        leftOffset += ((double)mouseStart.x / (double)size) * effectiveSize;
+                        topOffset += ((double)mouseStart.y / (double)size) * effectiveSize;
                         effectiveSize = scalingFactor * effectiveSize;
                         std::cout << "Using a new bounding box of [" << leftOffset << ", " << topOffset << ", " << effectiveSize << ", " << effectiveSize << std::endl;
                         sf::sleep(sf::milliseconds(500));
@@ -215,10 +216,10 @@ void ContourTiler::HandleEvents(sf::RenderWindow& window, bool& alive)
                     else
                     {
                         // We have a valid exclusion. Exclude all the points within the bounding box.
-                        decimal xStart = leftOffset + (mouseStart.x / (decimal)size) * effectiveSize;
-                        decimal yStart = topOffset + (mouseStart.y / (decimal)size) * effectiveSize;
-                        decimal xEnd = leftOffset + (mousePos.x / (decimal)size) * effectiveSize;
-                        decimal yEnd = topOffset + (mousePos.y / (decimal)size) * effectiveSize;
+                        double xStart = leftOffset + (mouseStart.x / (double)size) * effectiveSize;
+                        double yStart = topOffset + (mouseStart.y / (double)size) * effectiveSize;
+                        double xEnd = leftOffset + (mousePos.x / (double)size) * effectiveSize;
+                        double yEnd = topOffset + (mousePos.y / (double)size) * effectiveSize;
 
                         sf::Vector2i pointStart(std::min((int)(xStart * size), size - 1), std::min((int)(yStart * size), size - 1));
                         sf::Vector2i pointEnd(std::min((int)(xEnd * size), size - 1), std::min((int)(yEnd * size), size - 1));
@@ -256,9 +257,9 @@ void ContourTiler::HandleEvents(sf::RenderWindow& window, bool& alive)
 
 void ContourTiler::ZoomToRegion(int x, int y)
 {
-    decimal viewSize = (decimal)1.0 / (decimal)regionSize;
-    leftOffset = (decimal)x * viewSize;
-    topOffset = (decimal)y * viewSize;
+    double viewSize = 1.0 / (double)regionSize;
+    leftOffset = (double)x * viewSize;
+    topOffset = (double)y * viewSize;
     effectiveSize = viewSize;
     rerender = true;
 }
@@ -472,7 +473,7 @@ void ContourTiler::Render(sf::RenderWindow& window, sf::Time elapsedTime)
     }
 }
 
-void ContourTiler::Run()
+void ContourTiler::Run(Settings* settings)
 {
     // 24 depth bits, 8 stencil bits, 8x AA, major version 4.
     sf::ContextSettings contextSettings = sf::ContextSettings(24, 8, 8, 4, 0);
@@ -482,9 +483,9 @@ void ContourTiler::Run()
     window.setFramerateLimit(60);
 
     // Load our data file.
-    if (!lineStripLoader.Initialize(Constant::ContourFile))
+    if (!lineStripLoader.Initialize(settings))
     {
-        std::cout << "Could not read the line strips file!" << std::endl;
+        std::cout << "Could not parse the input GeoJSON files!" << std::endl;
         return;
     }
 
@@ -511,15 +512,21 @@ void ContourTiler::Run()
 }
 
 // Performs the graphical interpolation and tiling of contours.
-int main(int argc, char* argv[])
+int main(int argc, const char* argv[])
 {
-    std::cout << "ContourTiler Start!" << std::endl;
-
-    std::unique_ptr<ContourTiler> contourTiler(new ContourTiler());
-    contourTiler->Run();
-
-    std::cout << "ContourTiler End!" << std::endl;
-    sf::sleep(sf::milliseconds(1000));
-
-    return 0;
+    std::cout << "ContourTiler" << std::endl;
+    Settings settings;
+    if (settings.ParseArguments(argc, argv))
+    {
+        std::unique_ptr<ContourTiler> contourTiler(new ContourTiler());
+        contourTiler->Run(&settings);
+        std::cout << "Done." << std::endl;
+        return 0;
+    }
+    else
+    {
+        std::cout << "Unable to parse the input arguments!" << std::endl;
+        settings.OutputUsage();
+        return 1;
+    }
 }

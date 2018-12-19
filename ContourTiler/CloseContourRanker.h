@@ -1,19 +1,18 @@
 #pragma once
-#include "Definitions.h"
 
 struct CloseContourLine
 {
-    decimal distanceSqd;
-    int elevationId;
-    decimal elevation;
+    bool populated;
+    double distanceSqd;
+    double elevation;
 
     CloseContourLine()
-        : elevationId(-1)
+        : populated(false)
     {
     }
 
-    CloseContourLine(decimal distanceSqd, int elevationId, decimal elevation)
-        : distanceSqd(distanceSqd), elevationId(elevationId), elevation(elevation)
+    CloseContourLine(double distanceSqd, double elevation)
+        : distanceSqd(distanceSqd), elevation(elevation), populated(false)
     {
     }
 
@@ -21,7 +20,6 @@ struct CloseContourLine
     {
         elevation = other.elevation;
         distanceSqd = other.distanceSqd;
-        elevationId = other.elevationId;
     }
 };
 
@@ -37,7 +35,7 @@ public:
     CloseContourRanker();
     void AddElevationToRank(const CloseContourLine& contourLine);
     bool FilledSufficientLines() const;
-    decimal GetWeightedElevation() const;
+    double GetWeightedElevation() const;
     
 };
 

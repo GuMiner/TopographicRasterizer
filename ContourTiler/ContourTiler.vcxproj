@@ -93,17 +93,21 @@
     <ClCompile Include="QuadExclusions.cpp" />
     <ClCompile Include="Quadtree.cpp" />
     <ClCompile Include="Rasterizer.cpp" />
+    <ClCompile Include="Settings.cpp" />
     <ClCompile Include="stb_implementations.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CloseContourRanker.h" />
     <ClInclude Include="ColorMapper.h" />
     <ClInclude Include="ContourTiler.h" />
-    <ClInclude Include="Definitions.h" />
+    <ClInclude Include="LineStrip.h" />
+    <ClInclude Include="Index.h" />
     <ClInclude Include="LineStripLoader.h" />
+    <ClInclude Include="Point.h" />
     <ClInclude Include="QuadExclusions.h" />
     <ClInclude Include="Quadtree.h" />
     <ClInclude Include="Rasterizer.h" />
+    <ClInclude Include="Settings.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

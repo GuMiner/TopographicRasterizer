@@ -492,7 +492,7 @@ void ContourTiler::Run(Settings* settings)
     // Load the exclusion file.
     quadExclusions.ReadExclusions();
 
-    rasterizer.Setup();
+    rasterizer.Setup(settings);
 
     SetupGraphicsElements();
     rerender = true;

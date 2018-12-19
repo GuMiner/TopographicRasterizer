@@ -24,33 +24,67 @@ sf::Vector2i Rasterizer::GetQuadtreeSquare(Point givenPoint)
         std::min((int)(givenPoint.y * (double)size + toggle), size - 1));
 }
 
-void Rasterizer::Setup()
+sf::Vector2i Rasterizer::GetQuadtreeSquare(LowResPoint givenPoint)
 {
+    return sf::Vector2i(
+        std::min((int)(givenPoint.x * (float)size + toggle), size - 1),
+        std::min((int)(givenPoint.y * (float)size + toggle), size - 1));
+}
+
+void Rasterizer::Setup(Settings* settings)
+{
+    this->settings = settings;
     quadtree.InitializeQuadtree();
 
     // Now fill in all the quadtree files with the indexes of all the lines within the area.
     long pointCount = 0;
     for (int i = 0; i < lineStrips->lineStrips.size(); i++)
     {
-        std::vector<Point>& points = lineStrips->lineStrips[i].points;
-
-        for (unsigned int j = 0; j < points.size() - 1; j++)
+        if (this->settings->IsHighResolution)
         {
-            sf::Vector2i quadStart = GetQuadtreeSquare(points[j]);
-            sf::Vector2i quadEnd = GetQuadtreeSquare(points[j + 1]);
-            Index index(i, j);
-
-            quadtree.AddToIndex(quadStart, index);
-
-            if (quadEnd.x != quadStart.x || quadEnd.y != quadStart.y)
+            std::vector<Point>& points = lineStrips->lineStrips[i].points;
+            for (unsigned int j = 0; j < points.size() - 1; j++)
             {
-                quadtree.AddToIndex(quadEnd, index);
+                sf::Vector2i quadStart = GetQuadtreeSquare(points[j]);
+                sf::Vector2i quadEnd = GetQuadtreeSquare(points[j + 1]);
+                Index index(i, j);
+
+                quadtree.AddToIndex(quadStart, index);
+
+                if (quadEnd.x != quadStart.x || quadEnd.y != quadStart.y)
+                {
+                    quadtree.AddToIndex(quadEnd, index);
+                }
+
+                ++pointCount;
+                if (pointCount % 1000000 == 0)
+                {
+                    std::cout << "Quadtree processed point " << pointCount << ". (" << (float)pointCount / 1.5e7f << "%)" << std::endl;
+                }
             }
-
-            ++pointCount;
-            if (pointCount % 1000000 == 0)
+        }
+        else
+        {
+            // TODO: Deduplicate
+            std::vector<LowResPoint>& points = lineStrips->lineStrips[i].lowResPoints;
+            for (unsigned int j = 0; j < points.size() - 1; j++)
             {
-                std::cout << "Quadtree processed point " << pointCount << ". (" << (float)pointCount / 1.5e7f << "%)" << std::endl;
+                sf::Vector2i quadStart = GetQuadtreeSquare(points[j]);
+                sf::Vector2i quadEnd = GetQuadtreeSquare(points[j + 1]);
+                Index index(i, j);
+
+                quadtree.AddToIndex(quadStart, index);
+
+                if (quadEnd.x != quadStart.x || quadEnd.y != quadStart.y)
+                {
+                    quadtree.AddToIndex(quadEnd, index);
+                }
+
+                ++pointCount;
+                if (pointCount % 1000000 == 0)
+                {
+                    std::cout << "Quadtree processed point " << pointCount << ". (" << (float)pointCount / 1.5e7f << "%)" << std::endl;
+                }
             }
         }
     }
@@ -63,27 +97,54 @@ void Rasterizer::Setup()
 // Same as the above but treats the index as a line.
 double Rasterizer::GetLineDistanceSqd(Index idx, Point point)
 {
-    Point& start = lineStrips->lineStrips[idx.stripIdx].points[idx.pointIdx];
-    Point& end = lineStrips->lineStrips[idx.stripIdx].points[idx.pointIdx + 1];
-
-    Point startToEnd(end.x - start.x, end.y - start.y);
-    double startEndLengthSqd = pow(startToEnd.x, 2) + pow(startToEnd.y, 2);
-
-    // Taking the dot product of the start-to-point vector with the (normalized) start-to-end vector.
-    Point startToPoint(point.x - start.x, point.y - start.y);
-    double projectionFraction = (startToPoint.x * startToEnd.x + startToPoint.y * startToEnd.y) / startEndLengthSqd;
-
-    if (projectionFraction > 0 && projectionFraction < 1)
+    if (this->settings->IsHighResolution)
     {
-        Point closestPoint(start.x + startToEnd.x * projectionFraction, start.y + startToEnd.y * projectionFraction);
-        return pow(closestPoint.x - point.x, 2) + pow(closestPoint.y - point.y, 2);
-    }
-    else if (projectionFraction < 0)
-    {
-        return pow(startToPoint.x, 2) + pow(startToPoint.y, 2);
-    }
+        Point& start = lineStrips->lineStrips[idx.stripIdx].points[idx.pointIdx];
+        Point& end = lineStrips->lineStrips[idx.stripIdx].points[idx.pointIdx + 1];
 
-    return pow(end.x - point.x, 2) + pow(end.y - point.y, 2);
+        Point startToEnd(end.x - start.x, end.y - start.y);
+        double startEndLengthSqd = pow(startToEnd.x, 2) + pow(startToEnd.y, 2);
+
+        // Taking the dot product of the start-to-point vector with the (normalized) start-to-end vector.
+        Point startToPoint(point.x - start.x, point.y - start.y);
+        double projectionFraction = (startToPoint.x * startToEnd.x + startToPoint.y * startToEnd.y) / startEndLengthSqd;
+
+        if (projectionFraction > 0 && projectionFraction < 1)
+        {
+            Point closestPoint(start.x + startToEnd.x * projectionFraction, start.y + startToEnd.y * projectionFraction);
+            return pow(closestPoint.x - point.x, 2) + pow(closestPoint.y - point.y, 2);
+        }
+        else if (projectionFraction < 0)
+        {
+            return pow(startToPoint.x, 2) + pow(startToPoint.y, 2);
+        }
+
+        return pow(end.x - point.x, 2) + pow(end.y - point.y, 2);
+    }
+    else
+    {
+        LowResPoint& start = lineStrips->lineStrips[idx.stripIdx].lowResPoints[idx.pointIdx];
+        LowResPoint& end = lineStrips->lineStrips[idx.stripIdx].lowResPoints[idx.pointIdx + 1];
+
+        LowResPoint startToEnd(end.x - start.x, end.y - start.y);
+        double startEndLengthSqd = pow(startToEnd.x, 2) + pow(startToEnd.y, 2);
+
+        // Taking the dot product of the start-to-point vector with the (normalized) start-to-end vector.
+        LowResPoint startToPoint(point.x - start.x, point.y - start.y);
+        double projectionFraction = (startToPoint.x * startToEnd.x + startToPoint.y * startToEnd.y) / startEndLengthSqd;
+
+        if (projectionFraction > 0 && projectionFraction < 1)
+        {
+            LowResPoint closestPoint(start.x + startToEnd.x * projectionFraction, start.y + startToEnd.y * projectionFraction);
+            return pow(closestPoint.x - point.x, 2) + pow(closestPoint.y - point.y, 2);
+        }
+        else if (projectionFraction < 0)
+        {
+            return pow(startToPoint.x, 2) + pow(startToPoint.y, 2);
+        }
+
+        return pow(end.x - point.x, 2) + pow(end.y - point.y, 2);
+    }
 }
 
 void Rasterizer::AddIfValid(int xP, int yP, std::vector<sf::Vector2i>& searchQuads)

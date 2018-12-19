@@ -8,6 +8,7 @@
 
 class Rasterizer
 {
+    Settings* settings;
     LineStripLoader* lineStrips;
     QuadExclusions* quadExclusions;
     Quadtree quadtree;
@@ -16,6 +17,7 @@ class Rasterizer
     int size;
 
     sf::Vector2i GetQuadtreeSquare(Point givenPoint);
+    sf::Vector2i GetQuadtreeSquare(LowResPoint givenPoint);
 
     // Gets the closest distance from a point to a line ensuring we account for endpoints.
     double GetLineDistanceSqd(Index idx, Point point);
@@ -39,7 +41,7 @@ public:
     Rasterizer(LineStripLoader* lineStripLoader, QuadExclusions* quadExclusions, int size);
 
     // Setup to be done before rasterization can be performed.
-    void Setup();
+    void Setup(Settings* settings);
 
     // Rasterizes the area, filling in the raster store.
     void Rasterize(double leftOffset, double topOffset, double effectiveSize, double** rasterStore, double& minElevation, double& maxElevation);

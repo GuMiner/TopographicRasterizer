@@ -33,7 +33,7 @@ To 3D print a terrain map, the greyscale image needs to be converted into an STL
 The STL file can then be 3D printed using your toolchain of choice.
 
 ## Example
-[Workflow Example](.\Example.md)
+[Workflow Example](.\Example\Example.md)
 
 ## Compilation / Dependencies
 [Building from the source](.\Building.md)

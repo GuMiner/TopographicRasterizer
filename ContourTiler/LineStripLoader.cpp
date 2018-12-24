@@ -129,7 +129,7 @@ bool LineStripLoader::Initialize(Settings* settings)
     for (std::string geojsonFile : settings->GeoJsonFiles)
     {
         std::ifstream lsf(geojsonFile, std::ios::in | std::ios::binary);
-        std::cout << "Loading GeoJSON file" << geojsonFile << "..." << std::endl;
+        std::cout << "Loading GeoJSON file " << geojsonFile << "..." << std::endl;
         json geoJson;
         lsf >> geoJson;
         std::cout << "Loaded GeoJSON file." << std::endl;

@@ -20,11 +20,11 @@ bool LineStripLoader::Initialize(Settings* settings)
     lineStrips.clear();
 
     double minX = std::numeric_limits<double>::max();
-    double maxX = std::numeric_limits<double>::min();
+    double maxX = std::numeric_limits<double>::lowest();
     double minY = std::numeric_limits<double>::max();
-    double maxY = std::numeric_limits<double>::min();
+    double maxY = std::numeric_limits<double>::lowest();
     double minElevation = std::numeric_limits<double>::max();
-    double maxElevation = std::numeric_limits<double>::min();
+    double maxElevation = std::numeric_limits<double>::lowest();
 
     long featureCount = 0;
     long lineSetCount = 0;
@@ -47,11 +47,11 @@ bool LineStripLoader::Initialize(Settings* settings)
 
             std::cout << "Finding boundaries of the GeoJSON file..." << std::endl;
             double localMinX = std::numeric_limits<double>::max();
-            double localMaxX = std::numeric_limits<double>::min();
+            double localMaxX = std::numeric_limits<double>::lowest();
             double localMinY = std::numeric_limits<double>::max();
-            double localMaxY = std::numeric_limits<double>::min();
+            double localMaxY = std::numeric_limits<double>::lowest();
             double localMinElevation = std::numeric_limits<double>::max();
-            double localMaxElevation = std::numeric_limits<double>::min();
+            double localMaxElevation = std::numeric_limits<double>::lowest();
 
             for (auto& feature : geoJson["features"])
             {
@@ -103,7 +103,7 @@ bool LineStripLoader::Initialize(Settings* settings)
             }
 
             std::cout << "Boundaries found of the file!" << std::endl;
-            std::cout << "  X: [" << localMinX << ", " << localMaxX << "], Y: [" << localMinY << ", " << localMaxY << "]" << std::endl;
+            std::cout << "  X: [" << localMinX << ", " << localMaxX << "], Y: [" << localMinY << ", " << localMaxY << "], Elevation: [" << localMinElevation << "," << localMaxElevation << "]" << std::endl;
 
             minX = std::min(localMinX, minX);
             minY = std::min(localMinY, minY);
@@ -112,17 +112,17 @@ bool LineStripLoader::Initialize(Settings* settings)
             maxY = std::max(localMaxY, maxY);
             maxElevation = std::max(localMaxElevation, maxElevation);
 
-            std::cout << "Global boundaries (all files) updated:" << std::endl;
-            std::cout << "  X: [" << minX << ", " << maxX << "], Y: [" << minY << ", " << maxY << "]" << std::endl;
+            std::cout << "  Global boundaries (all files) updated to:" << std::endl;
+            std::cout << "    X: [" << minX << ", " << maxX << "], Y: [" << minY << ", " << maxY << "], Elevation: [" << minElevation << "," << maxElevation << "]" << std::endl;
         }
 
     std::cout << std::endl;
     std::cout << "Global boundaries (all files):" << std::endl;
-    std::cout << "  X: [" << minX << ", " << maxX << "], Y: [" << minY << ", " << maxY << "]" << std::endl;
-    std::cout << "Statistics: Features: " << featureCount << ". Line sets: " << lineSetCount << ". Points: " << pointCount << "." << std::endl;
+    std::cout << "  X: [" << minX << ", " << maxX << "], Y: [" << minY << ", " << maxY << "], Elevation: [" << minElevation << "," << maxElevation << "]" << std::endl;
+    std::cout << "Statistics: " << std::endl;
+    std::cout << "  Features: " << featureCount << ". Line sets: " << lineSetCount << ". Points: " << pointCount << "." << std::endl;
     std::cout << std::endl;
 
-    long parsedFeatures = 0;
     long parsedPoints = 0;
 
     std::cout << "=== Importing Data ===" << std::endl;
@@ -145,12 +145,6 @@ bool LineStripLoader::Initialize(Settings* settings)
                 else // if (feature["properties"][settings->ElevationFeature.c_str()].is_number_float())
                 {
                     elevation = feature["properties"][settings->ElevationFeature.c_str()].get<double>();
-                }
-
-                ++parsedFeatures;
-                if (parsedFeatures % 1000 == 0)
-                {
-                    std::cout << "Feature " << parsedFeatures << " of " << featureCount << "." << std::endl;
                 }
 
                 for (auto& lineSet : feature["geometry"]["coordinates"])
@@ -182,16 +176,10 @@ bool LineStripLoader::Initialize(Settings* settings)
                             lineStrips[i].lowResPoints.push_back(lrPoint);
                         }
 
-                        ++pointCount;
-                        if (pointCount % 10000 == 0)
-                        {
-                            std::cout << "(Count: " << pointCount << " " << elevation << ") " << std::endl;
-                        }
-
                         ++parsedPoints;
-                        if (parsedPoints % 1000 == 0)
+                        if (parsedPoints % (pointCount / 10) == 0)
                         {
-                            std::cout << "  Point " << parsedPoints << " of " << pointCount << "." << std::endl;
+                            std::cout << "  Point " << parsedPoints << " of " << pointCount << " loaded." << std::endl;
                         }
                     }
                 }

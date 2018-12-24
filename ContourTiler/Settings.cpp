@@ -4,7 +4,7 @@
 
 // Setup defaults
 Settings::Settings()
-    : IsHighResolution(true), ElevationFeature("Elevation"), GeoJsonFiles()
+    : IsHighResolution(true), ElevationFeature("Elevation"), ExclusionFile("exclusions.bin"), GeoJsonFiles()
 {
 }
 
@@ -18,7 +18,7 @@ bool Settings::endsWithGeoJson(std::string argument)
     }
 
     int counter = 0;
-    for (int i = argument.length() - geoJsonKeyword.length(); i < geoJsonKeyword.length(); i++, counter++)
+    for (size_t i = argument.length() - geoJsonKeyword.length(); i < geoJsonKeyword.length(); i++, counter++)
     {
         if (std::toupper(argument[i]) != std::toupper(geoJsonKeyword[counter]))
         {
@@ -88,6 +88,19 @@ bool Settings::ParseArguments(int argc, const char* argv[])
                 parsedInput = true;
             }
 
+            if (equalsCaseInsensitive("--ExclusionFile", argv[i]) || equalsCaseInsensitive("-ExclusionFile", argv[i]))
+            {
+                if (i + 1 == argc)
+                {
+                    std::cout << "No exclusion file name was found after '--ExclusionFile'!" << std::endl;
+                    return false;
+                }
+
+                i++;
+                this->ExclusionFile = std::string(argv[i]);
+                parsedInput = true;
+            }
+
             if (equalsCaseInsensitive("--LowResolution", argv[i]) || equalsCaseInsensitive("-LowResolution", argv[i]))
             {
                 this->IsHighResolution = false;
@@ -119,6 +132,8 @@ void Settings::OutputUsage()
     std::cout << "  By default, the elevation is assumed to be in the 'Elevation' feature, but the --Feature argument can override this." << std::endl;
     std::cout << std::endl;
     std::cout << "Options:" << std::endl;
-    std::cout << " --Feature [Feature]: Specifies the input feature containing the elevation of each MultiLineString." << std::endl;
-    std::cout << " --LowResolution: Stores geometry data in 32-bit format. Useful for low-memory or large geometry regions." << std::endl;
+    std::cout << " --Feature [Feature]: Specifies the input feature containing the elevation of each MultiLineString. Defaults to 'Elevation'." << std::endl;
+    std::cout << " --LowResolution: Stores geometry data in 32-bit format. Useful for low-memory or large geometry regions. The default is high-resolution." << std::endl;
+    std::cout << " --ExclusionFile: If specified, overrides the name of the exclusion file to exclude regions from output. Defaults to 'exclusions.bin'" << std::endl;
+    std::cout << std::endl;
 }

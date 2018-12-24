@@ -34,6 +34,7 @@ sf::Vector2i Rasterizer::GetQuadtreeSquare(LowResPoint givenPoint)
 void Rasterizer::Setup(Settings* settings)
 {
     this->settings = settings;
+    std::cout << "Initializing point lookup quadtree..." << std::endl;
     quadtree.InitializeQuadtree();
 
     // Now fill in all the quadtree files with the indexes of all the lines within the area.
@@ -130,7 +131,7 @@ double Rasterizer::GetLineDistanceSqd(Index idx, Point point)
         double startEndLengthSqd = pow(startToEnd.x, 2) + pow(startToEnd.y, 2);
 
         // Taking the dot product of the start-to-point vector with the (normalized) start-to-end vector.
-        LowResPoint startToPoint(point.x - start.x, point.y - start.y);
+        LowResPoint startToPoint((float)(point.x - start.x), (float)(point.y - start.y));
         double projectionFraction = (startToPoint.x * startToEnd.x + startToPoint.y * startToEnd.y) / startEndLengthSqd;
 
         if (projectionFraction > 0 && projectionFraction < 1)
@@ -270,20 +271,15 @@ void Rasterizer::RasterizeColumnRange(double leftOffset, double topOffset, doubl
                 }
             }
         }
-
-        if (i % 50 == 0)
-        {
-            std::cout << "Rasterized " << i << " of " << size << std::endl;
-        }
     }
 
-    std::cout << "Thread from " << startColumn << " to " << (startColumn + columnCount) << " complete." << std::endl;
+    std::cout << "Rasterization from " << startColumn << " to " << (startColumn + columnCount) << " complete." << std::endl;
 }
 
 void Rasterizer::Rasterize(double leftOffset, double topOffset, double effectiveSize, double** rasterStore, double& minElevation, double& maxElevation)
 {
     minElevation = std::numeric_limits<double>::max();
-    maxElevation = std::numeric_limits<double>::min();
+    maxElevation = std::numeric_limits<double>::lowest();
 
     const int splitFactor = 7;
     double minElevations[splitFactor];
@@ -294,14 +290,13 @@ void Rasterizer::Rasterize(double leftOffset, double topOffset, double effective
     for (int i = 0; i < splitFactor; i++)
     {
         minElevations[i] = std::numeric_limits<double>::max();
-        maxElevations[i] = std::numeric_limits<double>::min();
+        maxElevations[i] = std::numeric_limits<double>::lowest();
 
         int actualRange = (i == splitFactor - 1) ? (size - range * splitFactor) + range : range;
         threads[i] = new std::thread(&Rasterizer::RasterizeColumnRange, this, leftOffset, topOffset, effectiveSize, i * range, actualRange, rasterStore, &minElevations[i], &maxElevations[i]);
     }
 
     std::cout << "Rasterizing..." << std::endl;
-    
     for (int i = 0; i < splitFactor; i++)
     {
         threads[i]->join();

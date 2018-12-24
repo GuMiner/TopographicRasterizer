@@ -15,6 +15,7 @@ public:
     // Settings
     bool IsHighResolution;
     std::string ElevationFeature;
+    std::string ExclusionFile;
     std::vector<std::string> GeoJsonFiles;
 };
 

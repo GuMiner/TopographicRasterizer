@@ -6,9 +6,7 @@
     <ClInclude Include="QuadExclusions.h" />
     <ClInclude Include="LineStripLoader.h" />
     <ClInclude Include="ContourTiler.h" />
-    <ClInclude Include="ColorMapper.h" />
     <ClInclude Include="CloseContourRanker.h" />
-    <ClInclude Include="Settings.h" />
     <ClInclude Include="Point.h">
       <Filter>dto</Filter>
     </ClInclude>
@@ -18,21 +16,34 @@
     <ClInclude Include="LineStrip.h">
       <Filter>dto</Filter>
     </ClInclude>
+    <ClInclude Include="Settings.h">
+      <Filter>misc</Filter>
+    </ClInclude>
+    <ClInclude Include="ColorMapper.h">
+      <Filter>misc</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CloseContourRanker.cpp" />
-    <ClCompile Include="ColorMapper.cpp" />
     <ClCompile Include="ContourTiler.cpp" />
     <ClCompile Include="LineStripLoader.cpp" />
     <ClCompile Include="QuadExclusions.cpp" />
     <ClCompile Include="Quadtree.cpp" />
     <ClCompile Include="Rasterizer.cpp" />
     <ClCompile Include="stb_implementations.cpp" />
-    <ClCompile Include="Settings.cpp" />
+    <ClCompile Include="Settings.cpp">
+      <Filter>misc</Filter>
+    </ClCompile>
+    <ClCompile Include="ColorMapper.cpp">
+      <Filter>misc</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="dto">
       <UniqueIdentifier>{ed3bced4-ce96-400a-9ce1-baa6e1bc0f0d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="misc">
+      <UniqueIdentifier>{6e026da9-5418-4b0f-a8df-159ff5bd9e50}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

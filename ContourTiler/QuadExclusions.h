@@ -14,10 +14,11 @@ struct Vec2iComparator
 class QuadExclusions
 {
     std::set<sf::Vector2i, Vec2iComparator> exclusions;
+    std::string exclusionFilename;
 
 public:
     QuadExclusions();
-    void ReadExclusions();
+    void SetupExclusions(const std::string& exclusionFilename);
     void WriteExclusions();
 
     bool IsExcluded(const sf::Vector2i& point) const;

@@ -7,12 +7,13 @@ QuadExclusions::QuadExclusions()
 {
 }
 
-void QuadExclusions::ReadExclusions()
+void QuadExclusions::SetupExclusions(const std::string& exclusionFilename)
 {
-    std::ifstream exclusionFile("exclusions_madison.bin", std::ios::out | std::ios::binary);
+    this->exclusionFilename = exclusionFilename;
+    std::ifstream exclusionFile(exclusionFilename, std::ios::out | std::ios::binary);
     if (!exclusionFile)
     {
-        std::cout << "Read no exclusions! Ensure the 'exclusions_hawaii.bin' file is in your working directory." << std::endl;
+        std::cout << "No exclusion file was found. Unless you want to specifically exclude regions, you can ignore this warning." << std::endl;
         return;
     }
 
@@ -27,7 +28,7 @@ void QuadExclusions::ReadExclusions()
     }
 
     exclusionFile.close();
-    std::cout << "Read the exclusion_madison file." << std::endl;
+    std::cout << "Read the exclusion file '" << exclusionFilename << "'." << std::endl;
 }
 
 bool QuadExclusions::IsExcluded(const sf::Vector2i& point) const
@@ -52,7 +53,7 @@ bool QuadExclusions::ToggleExclusion(const sf::Vector2i& point)
 
 void QuadExclusions::WriteExclusions()
 {
-    std::ofstream exclusionFile("exclusions_madison.bin", std::ios::out | std::ios::binary);
+    std::ofstream exclusionFile(this->exclusionFilename, std::ios::out | std::ios::binary);
     int size = (int)exclusions.size();
     exclusionFile.write((char*)&size, sizeof(int));
 
@@ -63,5 +64,5 @@ void QuadExclusions::WriteExclusions()
     }
 
     exclusionFile.close();
-    std::cout << "Wrote the exclusions file out!" << std::endl;
+    std::cout << "Wrote the exclusions file '" << this->exclusionFilename << "' out!" << std::endl;
 }

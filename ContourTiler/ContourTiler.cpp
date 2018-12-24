@@ -178,7 +178,6 @@ void ContourTiler::HandleEvents(sf::RenderWindow& window, bool& alive)
 
             double x = leftOffset + (mousePos.x / (double)size) * effectiveSize;
             double y = topOffset + (mousePos.y / (double)size) * effectiveSize;
-            std::cout << x << "--" << y << std::endl;
 
             sf::Vector2i point(std::min((int)(x * size), size - 1), std::min((int)(y * size), size - 1));
             sf::Vector2i nextPoint(point.x + 1, point.y + 1);
@@ -188,10 +187,9 @@ void ContourTiler::HandleEvents(sf::RenderWindow& window, bool& alive)
             double endX = ((((double)nextPoint.x / (double)size) - leftOffset) / effectiveSize) * size;
             double endY = ((((double)nextPoint.y / (double)size) - topOffset) / effectiveSize) * size;
 
-            sf::Vector2f size(sf::Vector2f(std::abs(startX - endX), std::abs(startY - endY)));
-            exclusionShape.setPosition(sf::Vector2f(startX, startY));
+            sf::Vector2f size(sf::Vector2f((float)std::abs(startX - endX), (float)std::abs(startY - endY)));
+            exclusionShape.setPosition(sf::Vector2f((float)startX, (float)startY));
             exclusionShape.setSize(size);
-            // std::cout << "Moved exclusion shape to [" << startX << ", " << startY << "], scaled to [" << size.x << ", " << size.y << "]." << std::endl;
         }
         else if (event.type == sf::Event::MouseButtonReleased)
         {
@@ -490,7 +488,9 @@ void ContourTiler::Run(Settings* settings)
     }
 
     // Load the exclusion file.
-    quadExclusions.ReadExclusions();
+    std::cout << std::endl;
+    std::cout << "==Initializing Environment==" << std::endl;
+    quadExclusions.SetupExclusions(settings->ExclusionFile);
 
     rasterizer.Setup(settings);
 

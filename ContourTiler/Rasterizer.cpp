@@ -3,12 +3,14 @@
 #include <iostream>
 #include <limits>
 #include <map>
+#include <mutex>
 #include <immintrin.h>
 #include <xmmintrin.h>
 #include "CloseContourRanker.h"
 #include "Rasterizer.h"
 
 double toggle;
+std::mutex logMutex;
 
 Rasterizer::Rasterizer(LineStripLoader* lineStripLoader, QuadExclusions* quadExclusions, int size)
     : lineStrips(lineStripLoader), quadExclusions(quadExclusions), quadtree(size), size(size)
@@ -38,7 +40,6 @@ void Rasterizer::Setup(Settings* settings)
     quadtree.InitializeQuadtree();
 
     // Now fill in all the quadtree files with the indexes of all the lines within the area.
-    long pointCount = 0;
     for (int i = 0; i < lineStrips->lineStrips.size(); i++)
     {
         if (this->settings->IsHighResolution)
@@ -55,12 +56,6 @@ void Rasterizer::Setup(Settings* settings)
                 if (quadEnd.x != quadStart.x || quadEnd.y != quadStart.y)
                 {
                     quadtree.AddToIndex(quadEnd, index);
-                }
-
-                ++pointCount;
-                if (pointCount % 1000000 == 0)
-                {
-                    std::cout << "Quadtree processed point " << pointCount << ". (" << (float)pointCount / 1.5e7f << "%)" << std::endl;
                 }
             }
         }
@@ -80,14 +75,14 @@ void Rasterizer::Setup(Settings* settings)
                 {
                     quadtree.AddToIndex(quadEnd, index);
                 }
-
-                ++pointCount;
-                if (pointCount % 1000000 == 0)
-                {
-                    std::cout << "Quadtree processed point " << pointCount << ". (" << (float)pointCount / 1.5e7f << "%)" << std::endl;
-                }
             }
         }
+
+        if (i % lineStrips->lineStrips.size() / 10 == 0)
+        {
+            std::cout << "  Processed line strip " << i << " of " << lineStrips->lineStrips.size() << std::endl;
+        }
+
     }
 
     toggle = 0;
@@ -273,7 +268,10 @@ void Rasterizer::RasterizeColumnRange(double leftOffset, double topOffset, doubl
         }
     }
 
-    std::cout << "Rasterization from " << startColumn << " to " << (startColumn + columnCount) << " complete." << std::endl;
+    // Ensure log messages are rendered neatly.
+    logMutex.lock();
+    std::cout << "  Rasterization from " << startColumn << " to " << (startColumn + columnCount) << " complete." << std::endl;
+    logMutex.unlock();
 }
 
 void Rasterizer::Rasterize(double leftOffset, double topOffset, double effectiveSize, double** rasterStore, double& minElevation, double& maxElevation)

@@ -9,19 +9,12 @@
 #include "Rasterizer.h"
 #include "Settings.h"
 
-struct ViewOptions
-{
-    bool colorize, rescale, lines;
-
-    ViewOptions()
-        : colorize(false), rescale(false), lines(true)
-    {
-    }
-};
-
 // Handles startup and the base graphics rendering loop.
 class ContourTiler
 {
+    bool renderColors;
+    bool renderContours;
+
     int size;
     int regionSize;
 
@@ -50,7 +43,6 @@ class ContourTiler
     bool* coverBuffer;
 
     bool isZoomMode;
-    ViewOptions viewOptions;
     ColorMapper colorMapper;
     sf::Time lastUpdateTime;
     
@@ -66,6 +58,8 @@ class ContourTiler
     void ZoomToRegion(int x, int y);
     bool isBulkProcessing;
     sf::Time regionStartTime;
+
+    void OutputDisplayHelp();
 
     // Handles GUI-based events, such as closing the application, resizing the window, etc.
     void HandleEvents(sf::RenderWindow& window, bool& alive);

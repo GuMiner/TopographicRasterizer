@@ -30,13 +30,26 @@ const char* RasterFolder = "madison_rasters";
 ContourTiler::ContourTiler()
     : lineStripLoader(), quadExclusions(), size(1000), regionSize(10), rasterizer(&lineStripLoader, &quadExclusions, size), minElevation(0), maxElevation(1), rasterizationBuffer(new double[size * size]), linesBuffer(new double[size * size]), coverBuffer(new bool[size * size]),
       leftOffset((double)0.0), topOffset((double)0.0), effectiveSize((double)1.0), mouseStart(-1, -1), mousePos(-1, -1), isRendering(false), isZoomMode(true),
-      rerender(false), viewOptions(), hideExclusionShape(false), isBulkProcessing(false), regionX(0), regionY(0)
+      rerender(false), hideExclusionShape(false), isBulkProcessing(false), regionX(0), regionY(0)
 { }
 
 ContourTiler::~ContourTiler()
 {
     delete[] rasterizationBuffer;
     delete[] linesBuffer;
+}
+
+void ContourTiler::OutputDisplayHelp()
+{
+    std::cout << "The graphical display supports the following commands:" << std::endl;
+    std::cout << "  Display" << std::endl;
+    std::cout << "    Left-click and hold/drag to select an area to zoom to. Release to zoom in." << std::endl;
+    std::cout << "    Right-click and release to zoom out." << std::endl;
+    std::cout << "    R: Resets the view to the default region" << std::endl;
+    std::cout << "    L: Enables or disables rendering contour lines." << std::endl;
+    std::cout << "    C: Enables or disables rendering a color spectrum overlay." << std::endl;
+    std::cout << "    H: Enables or disables rendering the excluded areas." << std::endl;
+    std::cout << "  W: Writes the excluded regions to the exclusion file." << std::endl;
 }
 
 void ContourTiler::HandleEvents(sf::RenderWindow& window, bool& alive)
@@ -51,41 +64,26 @@ void ContourTiler::HandleEvents(sf::RenderWindow& window, bool& alive)
         }
         else if (event.type == sf::Event::KeyReleased)
         {
-            if (event.key.code == sf::Keyboard::Escape)
+            if (event.key.code == sf::Keyboard::R)
             {
-                alive = false;
-            }
-            else if (event.key.code == sf::Keyboard::R)
-            {
-                // Reset.
+                // Reset
                 topOffset = 0.0f;
                 leftOffset = 0.0f;
                 effectiveSize = 1.0f;
-                std::cout << "Reset! " << std::endl;
-                sf::sleep(sf::milliseconds(500));
                 rerender = true;
+                std::cout << "Reset display " << std::endl;
             }
             else if (event.key.code == sf::Keyboard::L)
             {
-                // Draw lines
-                viewOptions.lines = !viewOptions.lines;
-                std::cout << "Lines: " << viewOptions.lines << std::endl;
+                // Contour lines
+                this->renderContours = !this->renderContours;
+                std::cout << "Toggled contour rendering: " << (this->renderContours ? "on" : "off") << std::endl;
             }
             else if (event.key.code == sf::Keyboard::C)
             {
                 // Colorize (true/false)
-                viewOptions.colorize = !viewOptions.colorize;
-                std::cout << "Toggled colorize: " << viewOptions.colorize << std::endl;
-            }
-            else if (event.key.code == sf::Keyboard::S)
-            {
-                viewOptions.rescale = !viewOptions.rescale;
-                std::cout << "Toggled rescale: " << viewOptions.rescale << std::endl;
-            }
-            else if (event.key.code == sf::Keyboard::U)
-            {
-                std::cout << "Forced an update." << std::endl;
-                rerender = true;
+                this->renderColors = !this->renderColors;
+                std::cout << "Toggled color rendering: " << (this->renderColors ? "on" : "off") << std::endl;
             }
             else if (event.key.code == sf::Keyboard::A)
             {
@@ -112,11 +110,12 @@ void ContourTiler::HandleEvents(sf::RenderWindow& window, bool& alive)
             else if (event.key.code == sf::Keyboard::W)
             {
                 quadExclusions.WriteExclusions();
+                std::cout << "Save exclusions to file" << std::endl;
             }
             else if (event.key.code == sf::Keyboard::H)
             {
-                hideExclusionShape = !hideExclusionShape;
-                std::cout << "Toggled hiding the exclusion shape." << std::endl;
+                this->hideExclusionShape = !this->hideExclusionShape;
+                std::cout << "Show exclusions: " << (this->hideExclusionShape ? "on" : "off") << std::endl;
             }
             else if (event.key.code == sf::Keyboard::Z)
             {
@@ -277,13 +276,15 @@ void ContourTiler::SetupGraphicsElements()
 
     // And the exclusion shape.
     exclusionShape.setFillColor(sf::Color(0, 0, 255, 140));
+    
+    rerender = true;
 }
 
 void ContourTiler::FillOverallTexture()
 {
     // Rasterize
     rasterizer.Rasterize(leftOffset, topOffset, effectiveSize, &rasterizationBuffer, minElevation, maxElevation);
-    if (viewOptions.lines)
+    if (this->renderContours)
     {
         rasterizer.LineRaster(leftOffset, topOffset, effectiveSize, &linesBuffer);
     }
@@ -311,7 +312,6 @@ void ContourTiler::UpdateTextureFromBuffer()
         for (int j = 0; j < size; j++)
         {
             double elevation = rasterizationBuffer[i + j * size];
-            double elevationPercent = viewOptions.rescale ? (elevation - minElevation) / (maxElevation - minElevation) : elevation;
             int pixelIdx = (i + j * size) * 4;
 
             if (elevation > 1 || coverBuffer[i + j * size])
@@ -324,13 +324,13 @@ void ContourTiler::UpdateTextureFromBuffer()
             else
             {
                 // Rasterization buffer.
-                if (viewOptions.colorize)
+                if (this->renderColors)
                 {
-                    colorMapper.MapColor(elevationPercent, &pixels[pixelIdx], &pixels[pixelIdx + 1], &pixels[pixelIdx + 2]);
+                    colorMapper.MapColor(elevation, &pixels[pixelIdx], &pixels[pixelIdx + 1], &pixels[pixelIdx + 2]);
                 }
                 else
                 {
-                    int z = (int)(elevationPercent * 255);
+                    int z = (int)(elevation * 255);
 
                     pixels[pixelIdx] = z;
                     pixels[pixelIdx + 1] = z;
@@ -339,7 +339,7 @@ void ContourTiler::UpdateTextureFromBuffer()
             }
 
             // Lines buffer modification, only if applicable.
-            if (viewOptions.lines && linesBuffer[i + j * size] > 0.5)
+            if (this->renderContours && linesBuffer[i + j * size] > 0.5)
             {
                 pixels[pixelIdx] = std::min(255, pixels[pixelIdx] + 50);
                 pixels[pixelIdx + 1] = std::min(255, pixels[pixelIdx] + 50);
@@ -423,17 +423,6 @@ void ContourTiler::Render(sf::RenderWindow& window, sf::Time elapsedTime)
                     regionY++;
                 }
 
-                // This is kinda odd as I'm regenerating 1,0, 2,0, 2, 1 and 3,1 after accidentally overwriting them.
-                // if (regionX == 3 && regionY == 0)
-                // {
-                //     regionX = 2;
-                //     regionY++;
-                // }
-
-                // if (regionY == 1 && regionX == 4)
-                // {
-                //     isBulkProcessing = false;
-                // }
                 if (regionY != regionSize) // Continue;
                 {
                     ZoomToRegion(regionX, regionY);
@@ -473,13 +462,7 @@ void ContourTiler::Render(sf::RenderWindow& window, sf::Time elapsedTime)
 
 void ContourTiler::Run(Settings* settings)
 {
-    // 24 depth bits, 8 stencil bits, 8x AA, major version 4.
-    sf::ContextSettings contextSettings = sf::ContextSettings(24, 8, 8, 4, 0);
-
-    sf::Uint32 style =  sf::Style::Titlebar | sf::Style::Close;
-    sf::RenderWindow window(sf::VideoMode(size, size), "Contour Tiler", style, contextSettings);
-    window.setFramerateLimit(60);
-
+    // == Load data ==
     // Load our data file.
     if (!lineStripLoader.Initialize(settings))
     {
@@ -494,19 +477,24 @@ void ContourTiler::Run(Settings* settings)
 
     rasterizer.Setup(settings);
 
-    SetupGraphicsElements();
-    rerender = true;
+    // == Setup graphics ==
+    // 24 depth bits, 8 stencil bits, 8x AA, major version 4.
+    sf::ContextSettings contextSettings = sf::ContextSettings(24, 8, 8, 4, 0);
 
-    // Start the main loop
+    sf::Uint32 style =  sf::Style::Titlebar | sf::Style::Close;
+    sf::RenderWindow window(sf::VideoMode(size, size), "Contour Tiler", style, contextSettings);
+    window.setFramerateLimit(60);
+
+    this->SetupGraphicsElements();
+
+    // == Start the main loop ==
     bool alive = true;
     sf::Clock timer;
-    lastUpdateTime = timer.getElapsedTime();
+    this->lastUpdateTime = timer.getElapsedTime();
     while (alive)
     {
         HandleEvents(window, alive);
         Render(window, timer.getElapsedTime());
-
-        // Display what we rendered.
         window.display();
     }
 }

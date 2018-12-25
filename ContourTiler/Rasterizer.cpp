@@ -276,6 +276,8 @@ void Rasterizer::RasterizeColumnRange(double leftOffset, double topOffset, doubl
 
 void Rasterizer::Rasterize(double leftOffset, double topOffset, double effectiveSize, double** rasterStore, double& minElevation, double& maxElevation)
 {
+    std::cout << "Region Rasterizing..." << std::endl;
+
     minElevation = std::numeric_limits<double>::max();
     maxElevation = std::numeric_limits<double>::lowest();
 
@@ -294,7 +296,6 @@ void Rasterizer::Rasterize(double leftOffset, double topOffset, double effective
         threads[i] = new std::thread(&Rasterizer::RasterizeColumnRange, this, leftOffset, topOffset, effectiveSize, i * range, actualRange, rasterStore, &minElevations[i], &maxElevations[i]);
     }
 
-    std::cout << "Rasterizing..." << std::endl;
     for (int i = 0; i < splitFactor; i++)
     {
         threads[i]->join();
@@ -315,7 +316,7 @@ void Rasterizer::Rasterize(double leftOffset, double topOffset, double effective
         }
     }
 
-    std::cout << "Rasterization complete." << std::endl;
+    std::cout << "Region Rasterization complete." << std::endl;
 }
 
 // Rasterizes a range of lines to improve perf.
@@ -347,19 +348,15 @@ void Rasterizer::RasterizeLineColumnRange(double leftOffset, double topOffset, d
 
             (*rasterStore)[i + j * size] = filled ? 1 : 0;
         }
-
-        if (i % 20 == 0)
-        {
-            std::cout << "Line rendered " << i << " of " << size << std::endl;
-        }
     }
 
-    std::cout << "Thread from " << startColumn << " to " << (startColumn + columnCount) << " complete." << std::endl;
+    logMutex.lock();
+    std::cout << "  Rasterization from " << startColumn << " to " << (startColumn + columnCount) << " complete." << std::endl;
+    logMutex.unlock();
 }
 
 void Rasterizer::LineRaster(double leftOffset, double topOffset, double effectiveSize, double** rasterStore)
 {
-    // This could also be parallelized.
     std::cout << "Line Rasterizing..." << std::endl;
     
     const int splitFactor = 7;
@@ -372,13 +369,11 @@ void Rasterizer::LineRaster(double leftOffset, double topOffset, double effectiv
         threads[i] = new std::thread(&Rasterizer::RasterizeLineColumnRange, this, leftOffset, topOffset, effectiveSize, i * range, actualRange, rasterStore);
     }
 
-    std::cout << "Rasterizing..." << std::endl;
-
     for (int i = 0; i < splitFactor; i++)
     {
         threads[i]->join();
         delete threads[i];
     }
 
-    std::cout << "Rasterization complete." << std::endl;
+    std::cout << "Line rasterization complete." << std::endl;
 }

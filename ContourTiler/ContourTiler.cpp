@@ -206,7 +206,7 @@ void ContourTiler::HandleEvents(sf::RenderWindow& window, bool& alive)
                         leftOffset += ((double)mouseStart.x / (double)size) * effectiveSize;
                         topOffset += ((double)mouseStart.y / (double)size) * effectiveSize;
                         effectiveSize = scalingFactor * effectiveSize;
-                        std::cout << "Using a new bounding box of [" << leftOffset << ", " << topOffset << ", " << effectiveSize << ", " << effectiveSize << std::endl;
+                        std::cout << "Using a new bounding box of [" << leftOffset << ", " << topOffset << ", " << effectiveSize << ", " << effectiveSize << "]" << std::endl;
                         sf::sleep(sf::milliseconds(500));
                         rerender = true;
                     }
@@ -284,10 +284,7 @@ void ContourTiler::FillOverallTexture()
 {
     // Rasterize
     rasterizer.Rasterize(leftOffset, topOffset, effectiveSize, &rasterizationBuffer, minElevation, maxElevation);
-    if (this->renderContours)
-    {
-        rasterizer.LineRaster(leftOffset, topOffset, effectiveSize, &linesBuffer);
-    }
+    rasterizer.LineRaster(leftOffset, topOffset, effectiveSize, &linesBuffer);
 
     UpdateTextureFromBuffer();
 }

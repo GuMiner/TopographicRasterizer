@@ -12,9 +12,9 @@ class Quadtree
     std::vector<std::vector<Index>> quadtree;
 
 public:
-    Quadtree(int size);
+    Quadtree();
 
-    void InitializeQuadtree();
+    void InitializeQuadtree(int size);
     void AddToIndex(sf::Vector2i quadtreePos, Index index);
     size_t QuadSize(sf::Vector2i quadtreePos) const;
     Index GetIndexFromQuad(sf::Vector2i quadtreePos, int offset) const;

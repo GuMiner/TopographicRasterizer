@@ -12,8 +12,8 @@
 double toggle;
 std::mutex logMutex;
 
-Rasterizer::Rasterizer(LineStripLoader* lineStripLoader, int size)
-    : lineStrips(lineStripLoader), quadtree(size), size(size)
+Rasterizer::Rasterizer(LineStripLoader* lineStripLoader)
+    : lineStrips(lineStripLoader), quadtree()
 {
     toggle = 0;
 }
@@ -36,8 +36,10 @@ sf::Vector2i Rasterizer::GetQuadtreeSquare(LowResPoint givenPoint)
 void Rasterizer::Setup(Settings* settings)
 {
     this->settings = settings;
+    this->size = this->settings->RegionSize;
+
     std::cout << "Initializing point lookup quadtree..." << std::endl;
-    quadtree.InitializeQuadtree();
+    quadtree.InitializeQuadtree(this->size);
 
     // Now fill in all the quadtree files with the indexes of all the lines within the area.
     for (int i = 0; i < lineStrips->lineStrips.size(); i++)
@@ -264,7 +266,7 @@ void Rasterizer::RasterizeColumnRange(double leftOffset, double topOffset, doubl
     logMutex.unlock();
 }
 
-void Rasterizer::Rasterize(double leftOffset, double topOffset, double effectiveSize, double** rasterStore, double& minElevation, double& maxElevation)
+void Rasterizer::Rasterize(double leftOffset, double topOffset, double effectiveSize, double** rasterStore, double minElevation, double maxElevation)
 {
     std::cout << "Region Rasterizing..." << std::endl;
 

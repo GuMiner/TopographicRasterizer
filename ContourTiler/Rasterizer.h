@@ -36,13 +36,13 @@ class Rasterizer
     void RasterizeLineColumnRange(double leftOffset, double topOffset, double effectiveSize, int startColumn, int columnCount, double** rasterStore);
 
 public:
-    Rasterizer(LineStripLoader* lineStripLoader, int size);
+    Rasterizer(LineStripLoader* lineStripLoader);
 
     // Setup to be done before rasterization can be performed.
     void Setup(Settings* settings);
 
     // Rasterizes the area, filling in the raster store.
-    void Rasterize(double leftOffset, double topOffset, double effectiveSize, double** rasterStore, double& minElevation, double& maxElevation);
+    void Rasterize(double leftOffset, double topOffset, double effectiveSize, double** rasterStore, double minElevation, double maxElevation);
 
     // Rasterizes in lines with full whiteness.
     void LineRaster(double leftOffset, double topOffset, double effectiveSize, double** rasterStore);

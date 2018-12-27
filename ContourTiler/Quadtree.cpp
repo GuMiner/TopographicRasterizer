@@ -3,11 +3,12 @@
 #include <iostream>
 #include "Quadtree.h"
 
-Quadtree::Quadtree(int size) : size(size)
+Quadtree::Quadtree()
 { }
 
-void Quadtree::InitializeQuadtree()
+void Quadtree::InitializeQuadtree(int size)
 {
+    this->size = size;
     quadtree.clear();
     for (int i = 0; i < size * size; i++)
     {

@@ -12,11 +12,10 @@
 // Handles startup and the base graphics rendering loop.
 class ContourTiler
 {
+    Settings* settings;
+
     bool renderColors;
     bool renderContours;
-
-    int size;
-    int regionSize;
 
     bool rerender;
     sf::Vector2i mouseStart;
@@ -27,7 +26,6 @@ class ContourTiler
     double topOffset;
     double effectiveSize;
 
-    double minElevation, maxElevation;
     double* rasterizationBuffer;
     Rasterizer rasterizer;
     std::future<void> renderingThread;
@@ -36,7 +34,6 @@ class ContourTiler
     LineStripLoader lineStripLoader;
 
     double* linesBuffer;
-    bool* coverBuffer;
 
     bool isZoomMode;
     ColorMapper colorMapper;
@@ -47,14 +44,13 @@ class ContourTiler
     void SetupGraphicsElements();
     void FillOverallTexture();
     void UpdateTextureFromBuffer();
-    
-    void ClearCoverPane();
 
     int regionX, regionY;
     void ZoomToRegion(int x, int y);
     bool isBulkProcessing;
     sf::Time regionStartTime;
 
+    bool outputHelp;
     void OutputDisplayHelp();
 
     // Handles GUI-based events, such as closing the application, resizing the window, etc.

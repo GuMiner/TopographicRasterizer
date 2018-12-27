@@ -13,8 +13,11 @@ public:
     void OutputUsage();
 
     // Settings
-    bool IsHighResolution;
     std::string ElevationFeature;
+    int RegionCount;
+    int RegionSize;
+    std::string OutputFolder;
+    bool IsHighResolution;
     std::vector<std::string> GeoJsonFiles;
 };
 

@@ -25,18 +25,25 @@
     #pragma comment(lib, "../lib/sfml-graphics-d")
 #endif
 
-const char* RasterFolder = "madison_rasters";
-
 ContourTiler::ContourTiler()
-    : lineStripLoader(), size(1000), regionSize(10), rasterizer(&lineStripLoader, size), minElevation(0), maxElevation(1), rasterizationBuffer(new double[size * size]), linesBuffer(new double[size * size]), coverBuffer(new bool[size * size]),
-      leftOffset((double)0.0), topOffset((double)0.0), effectiveSize((double)1.0), mouseStart(-1, -1), mousePos(-1, -1), isRendering(false), isZoomMode(true),
-      rerender(false), isBulkProcessing(false), regionX(0), regionY(0)
+    : lineStripLoader(), rasterizer(&lineStripLoader), rasterizationBuffer(nullptr), linesBuffer(nullptr),
+      leftOffset((double)0.0), topOffset((double)0.0), effectiveSize((double)1.0), mouseStart(-1, -1), mousePos(-1, -1),
+      isRendering(false), isZoomMode(true), rerender(false),
+      isBulkProcessing(false), regionX(0), regionY(0),
+      outputHelp(false)
 { }
 
 ContourTiler::~ContourTiler()
 {
-    delete[] rasterizationBuffer;
-    delete[] linesBuffer;
+    if (rasterizationBuffer != nullptr)
+    {
+        delete[] rasterizationBuffer;
+    }
+
+    if (linesBuffer != nullptr)
+    {
+        delete[] linesBuffer;
+    }
 }
 
 void ContourTiler::OutputDisplayHelp()
@@ -50,7 +57,10 @@ void ContourTiler::OutputDisplayHelp()
     std::cout << "    C: Enables or disables rendering a color spectrum overlay." << std::endl;
     std::cout << "  Export" << std::endl;
     std::cout << "    P: Starts bulk processing, dividing up the image into regions and rendering heightmaps" << std::endl;
-
+    std::cout << std::endl;
+    std::cout << "  Usage" << std::endl;
+    std::cout << "    To use the graphical display, navigate to the region you wish exported and hit 'P'." << std::endl;
+    std::cout << "     The selected region will be divided up and rendered out to image files." << std::endl;
 }
 
 void ContourTiler::HandleEvents(sf::RenderWindow& window, bool& alive)
@@ -148,10 +158,10 @@ void ContourTiler::HandleEvents(sf::RenderWindow& window, bool& alive)
                 if (xNew > mouseStart.x && yNew > mouseStart.y)
                 {
                     // We have a valid zoom-in. Determine the new bounding box. However, we want a proper scaling factor.
-                    double scalingFactor = std::min(((double)(xNew - mouseStart.x) / (double)size), ((double)(yNew - mouseStart.y / (double)size)));
+                    double scalingFactor = std::min(((double)(xNew - mouseStart.x) / (double)settings->RegionSize), ((double)(yNew - mouseStart.y / (double)settings->RegionSize)));
 
-                    leftOffset += ((double)mouseStart.x / (double)size) * effectiveSize;
-                    topOffset += ((double)mouseStart.y / (double)size) * effectiveSize;
+                    leftOffset += ((double)mouseStart.x / (double)settings->RegionSize) * effectiveSize;
+                    topOffset += ((double)mouseStart.y / (double)settings->RegionSize) * effectiveSize;
                     effectiveSize = scalingFactor * effectiveSize;
                     std::cout << "Zooming in to [" << leftOffset << ", " << topOffset << ", " << effectiveSize << ", " << effectiveSize << "]" << std::endl;
                     rerender = true;
@@ -165,7 +175,7 @@ void ContourTiler::HandleEvents(sf::RenderWindow& window, bool& alive)
 
 void ContourTiler::ZoomToRegion(int x, int y)
 {
-    double viewSize = 1.0 / (double)regionSize;
+    double viewSize = 1.0 / (double)settings->RegionCount;
     leftOffset = (double)x * viewSize;
     topOffset = (double)y * viewSize;
     effectiveSize = viewSize;
@@ -175,7 +185,7 @@ void ContourTiler::ZoomToRegion(int x, int y)
 void ContourTiler::SetupGraphicsElements()
 {
     // Sets up the background and zoom shape
-    overallTexture.create(size, size);
+    overallTexture.create(settings->RegionSize, settings->RegionSize);
     overallTexture.setRepeated(false);
     overallTexture.setSmooth(false);
 
@@ -185,39 +195,31 @@ void ContourTiler::SetupGraphicsElements()
     zoomShape.setOutlineThickness(1);
     zoomShape.setFillColor(sf::Color::Transparent);
     
+    this->rasterizationBuffer = new double[settings->RegionSize * settings->RegionSize];
+    this->linesBuffer = new double[settings->RegionSize * settings->RegionSize];
+
     rerender = true;
 }
 
 void ContourTiler::FillOverallTexture()
 {
     // Rasterize
-    rasterizer.Rasterize(leftOffset, topOffset, effectiveSize, &rasterizationBuffer, minElevation, maxElevation);
+    rasterizer.Rasterize(leftOffset, topOffset, effectiveSize, &rasterizationBuffer, 0, 1); // min elevation, max elevation
     rasterizer.LineRaster(leftOffset, topOffset, effectiveSize, &linesBuffer);
 
     UpdateTextureFromBuffer();
 }
 
-void ContourTiler::ClearCoverPane()
-{
-    for (int i = 0; i < size; i++)
-    {
-        for (int j = 0; j < size; j++)
-        {
-            coverBuffer[i + j*size] = false;
-        }
-    }
-}
-
 void ContourTiler::UpdateTextureFromBuffer()
 {
     // Copy over to the image with an appropriate color mapping.
-    sf::Uint8* pixels = new sf::Uint8[size * size * 4]; // * 4 because pixels have 4 components (RGBA)
-    for (int i = 0; i < size; i++)
+    sf::Uint8* pixels = new sf::Uint8[settings->RegionSize * settings->RegionSize * 4]; // * 4 because pixels have 4 components (RGBA)
+    for (int i = 0; i < settings->RegionSize; i++)
     {
-        for (int j = 0; j < size; j++)
+        for (int j = 0; j < settings->RegionSize; j++)
         {
-            double elevation = rasterizationBuffer[i + j * size];
-            int pixelIdx = (i + j * size) * 4;
+            double elevation = rasterizationBuffer[i + j * settings->RegionSize];
+            int pixelIdx = (i + j * settings->RegionSize) * 4;
 
             if (this->renderColors)
             {
@@ -233,7 +235,7 @@ void ContourTiler::UpdateTextureFromBuffer()
             }
 
             // Lines buffer modification, only if applicable.
-            if (this->renderContours && linesBuffer[i + j * size] > 0.5)
+            if (this->renderContours && linesBuffer[i + j * settings->RegionSize] > 0.5)
             {
                 pixels[pixelIdx] = std::min(255, pixels[pixelIdx] + 50);
                 pixels[pixelIdx + 1] = std::min(255, pixels[pixelIdx] + 50);
@@ -252,7 +254,6 @@ void ContourTiler::Render(sf::RenderWindow& window, sf::Time elapsedTime)
     // Rerender as needed on a separate thread.
     if (rerender && !isRendering)
     {
-        ClearCoverPane();
         isRendering = true;
         rasterStartTime = elapsedTime;
         renderingThread = std::async(std::launch::async, &ContourTiler::FillOverallTexture, this);
@@ -265,6 +266,11 @@ void ContourTiler::Render(sf::RenderWindow& window, sf::Time elapsedTime)
             rerender = false;
             isRendering = false;
             std::cout << "Raster time: " << (elapsedTime - rasterStartTime).asSeconds() << " s." << std::endl;
+            if (!this->outputHelp)
+            {
+                this->OutputDisplayHelp();
+                this->outputHelp = true;
+            }
 
             if (isBulkProcessing)
             {
@@ -272,35 +278,35 @@ void ContourTiler::Render(sf::RenderWindow& window, sf::Time elapsedTime)
                 if (regionX == 0)
                 {
                     std::stringstream folder;
-                    folder << ".\\" << RasterFolder << "\\" << regionY;
+                    folder << ".\\" << settings->OutputFolder << "\\" << regionY;
                     _mkdir(folder.str().c_str());
                     std::cout << "Making directory " << folder.str().c_str() << std::endl;
                 }
 
                 // Save out our current data
                 std::stringstream file;
-                file << RasterFolder << "/" << regionY << "/" << regionX << ".png";
+                file << settings->OutputFolder << "/" << regionY << "/" << regionX << ".png";
 
-                unsigned char* data = new unsigned char[size * size * 4];
-                for (int i = 0; i < size; i++)
+                unsigned char* data = new unsigned char[settings->RegionSize * settings->RegionSize * 4];
+                for (int i = 0; i < settings->RegionSize; i++)
                 {
-                    for (int j = 0; j < size; j++)
+                    for (int j = 0; j < settings->RegionSize; j++)
                     {
                         // RGBA order
-                        int scaledVersion = std::min((int)(rasterizationBuffer[i + j * size] * (65536)), 65535);
+                        int scaledVersion = std::min((int)(rasterizationBuffer[i + j * settings->RegionSize] * (65536)), 65535);
                         // RED == upper 8 bytes.
                         // GREEN == lower 8 bytes.
 
-                        data[(i + j * size) * 4] = (unsigned char)(scaledVersion & 0x00FF);
-                        data[(i + j * size) * 4 + 1] = (unsigned char)((scaledVersion & 0xFF00) >> 8);
-                        data[(i + j * size) * 4 + 2] = 255;
-                        data[(i + j * size) * 4 + 3] = 255;
+                        data[(i + j * settings->RegionSize) * 4] = (unsigned char)(scaledVersion & 0x00FF);
+                        data[(i + j * settings->RegionSize) * 4 + 1] = (unsigned char)((scaledVersion & 0xFF00) >> 8);
+                        data[(i + j * settings->RegionSize) * 4 + 2] = 255;
+                        data[(i + j * settings->RegionSize) * 4 + 3] = 255;
                     }
                 }
 
                 const int RGBA = 4;
                 std::cout << file.str().c_str() << std::endl;
-                int result = stbi_write_png(file.str().c_str(), size, size, RGBA, &data[0], size * 4 * sizeof(unsigned char));
+                int result = stbi_write_png(file.str().c_str(), settings->RegionSize, settings->RegionSize, RGBA, &data[0], settings->RegionSize * 4 * sizeof(unsigned char));
                 if (result != 0)
                 {
                     std::cout << "Failed to write a file: " << result << " for raster " << regionX << ", " << regionY << std::endl;
@@ -311,19 +317,20 @@ void ContourTiler::Render(sf::RenderWindow& window, sf::Time elapsedTime)
 
                 // Move to the next region.
                 regionX++;
-                if (regionX == regionSize)
+                if (regionX == settings->RegionCount)
                 {
                     regionX = 0;
                     regionY++;
                 }
 
-                if (regionY != regionSize) // Continue;
+                if (regionY != settings->RegionCount) // Continue;
                 {
                     ZoomToRegion(regionX, regionY);
                 }
                 else
                 {
                     isBulkProcessing = false;
+                    std::cout << "Tiling and rasterization done!" << std::endl;
                 }
             }
         }
@@ -351,6 +358,7 @@ void ContourTiler::Render(sf::RenderWindow& window, sf::Time elapsedTime)
 
 void ContourTiler::Run(Settings* settings)
 {
+    this->settings = settings;
     // == Load data ==
     // Load our data file.
     if (!lineStripLoader.Initialize(settings))
@@ -368,7 +376,7 @@ void ContourTiler::Run(Settings* settings)
     sf::ContextSettings contextSettings = sf::ContextSettings(24, 8, 8, 4, 0);
 
     sf::Uint32 style =  sf::Style::Titlebar | sf::Style::Close;
-    sf::RenderWindow window(sf::VideoMode(size, size), "Contour Tiler", style, contextSettings);
+    sf::RenderWindow window(sf::VideoMode(settings->RegionSize, settings->RegionSize), "Contour Tiler", style, contextSettings);
     window.setFramerateLimit(60);
 
     this->SetupGraphicsElements();

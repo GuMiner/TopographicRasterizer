@@ -150,7 +150,7 @@ bool LineStripLoader::Initialize(Settings* settings)
                 for (auto& lineSet : feature["geometry"]["coordinates"])
                 {
                     lineStrips.push_back(LineStrip());
-                    int i = lineStrips.size() - 1;
+                    size_t i = lineStrips.size() - 1;
 
                     lineStrips[i].elevation = (elevation - minElevation) / (maxElevation - minElevation);
 

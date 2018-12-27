@@ -90,7 +90,6 @@
     <ClCompile Include="ColorMapper.cpp" />
     <ClCompile Include="ContourTiler.cpp" />
     <ClCompile Include="LineStripLoader.cpp" />
-    <ClCompile Include="QuadExclusions.cpp" />
     <ClCompile Include="Quadtree.cpp" />
     <ClCompile Include="Rasterizer.cpp" />
     <ClCompile Include="Settings.cpp" />
@@ -104,7 +103,6 @@
     <ClInclude Include="Index.h" />
     <ClInclude Include="LineStripLoader.h" />
     <ClInclude Include="Point.h" />
-    <ClInclude Include="QuadExclusions.h" />
     <ClInclude Include="Quadtree.h" />
     <ClInclude Include="Rasterizer.h" />
     <ClInclude Include="Settings.h" />

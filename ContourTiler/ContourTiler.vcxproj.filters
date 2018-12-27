@@ -3,7 +3,6 @@
   <ItemGroup>
     <ClInclude Include="Rasterizer.h" />
     <ClInclude Include="Quadtree.h" />
-    <ClInclude Include="QuadExclusions.h" />
     <ClInclude Include="LineStripLoader.h" />
     <ClInclude Include="ContourTiler.h" />
     <ClInclude Include="CloseContourRanker.h" />
@@ -27,7 +26,6 @@
     <ClCompile Include="CloseContourRanker.cpp" />
     <ClCompile Include="ContourTiler.cpp" />
     <ClCompile Include="LineStripLoader.cpp" />
-    <ClCompile Include="QuadExclusions.cpp" />
     <ClCompile Include="Quadtree.cpp" />
     <ClCompile Include="Rasterizer.cpp" />
     <ClCompile Include="stb_implementations.cpp" />

@@ -12,8 +12,8 @@
 double toggle;
 std::mutex logMutex;
 
-Rasterizer::Rasterizer(LineStripLoader* lineStripLoader, QuadExclusions* quadExclusions, int size)
-    : lineStrips(lineStripLoader), quadExclusions(quadExclusions), quadtree(size), size(size)
+Rasterizer::Rasterizer(LineStripLoader* lineStripLoader, int size)
+    : lineStrips(lineStripLoader), quadtree(size), size(size)
 {
     toggle = 0;
 }
@@ -131,7 +131,7 @@ double Rasterizer::GetLineDistanceSqd(Index idx, Point point)
 
         if (projectionFraction > 0 && projectionFraction < 1)
         {
-            LowResPoint closestPoint(start.x + startToEnd.x * projectionFraction, start.y + startToEnd.y * projectionFraction);
+            LowResPoint closestPoint((float)(start.x + startToEnd.x * projectionFraction), (float)(start.y + startToEnd.y * projectionFraction));
             return pow(closestPoint.x - point.x, 2) + pow(closestPoint.y - point.y, 2);
         }
         else if (projectionFraction < 0)
@@ -146,7 +146,7 @@ double Rasterizer::GetLineDistanceSqd(Index idx, Point point)
 void Rasterizer::AddIfValid(int xP, int yP, std::vector<sf::Vector2i>& searchQuads)
 {
     sf::Vector2i pt(xP, yP);
-    if (xP >= 0 && yP >= 0 && xP < size && yP < size && !quadExclusions->IsExcluded(pt) && quadtree.QuadSize(pt) != 0)
+    if (xP >= 0 && yP >= 0 && xP < size && yP < size && quadtree.QuadSize(pt) != 0)
     {
         searchQuads.push_back(sf::Vector2i(xP, yP));
     }
@@ -177,12 +177,6 @@ void Rasterizer::AddAreasToSearch(int distance, sf::Vector2i startQuad, std::vec
 double Rasterizer::FindClosestPoint(Point point)
 {
     sf::Vector2i quadSquare = GetQuadtreeSquare(point);
-
-    if (false) // quadExclusions->IsExcluded(quadSquare))
-    {
-        // The point the point is within is excluded. Return immediately.
-        return 2e8;
-    }
 
     // Loop forever as we are guaranteed to eventually find a point.
     int gridDistance = 1;
@@ -252,18 +246,14 @@ void Rasterizer::RasterizeColumnRange(double leftOffset, double topOffset, doubl
             double elevation = FindClosestPoint(point);
             (*rasterStore)[i + j * size] = elevation;
 
-            // Avoid scaling based on the exclusion lists.
-            if (elevation < 1e8)
+            if (elevation < *minElevation)
             {
-                if (elevation < *minElevation)
-                {
-                    *minElevation = elevation;
-                }
+                *minElevation = elevation;
+            }
 
-                if (elevation > *maxElevation)
-                {
-                    *maxElevation = elevation;
-                }
+            if (elevation > *maxElevation)
+            {
+                *maxElevation = elevation;
             }
         }
     }

@@ -3,14 +3,12 @@
 #include <SFML\Graphics.hpp>
 #include <vector>
 #include "LineStripLoader.h"
-#include "QuadExclusions.h"
 #include "Quadtree.h"
 
 class Rasterizer
 {
     Settings* settings;
     LineStripLoader* lineStrips;
-    QuadExclusions* quadExclusions;
     Quadtree quadtree;
 
     // The number of quadtree xy grid spaces.
@@ -38,7 +36,7 @@ class Rasterizer
     void RasterizeLineColumnRange(double leftOffset, double topOffset, double effectiveSize, int startColumn, int columnCount, double** rasterStore);
 
 public:
-    Rasterizer(LineStripLoader* lineStripLoader, QuadExclusions* quadExclusions, int size);
+    Rasterizer(LineStripLoader* lineStripLoader, int size);
 
     // Setup to be done before rasterization can be performed.
     void Setup(Settings* settings);

@@ -23,9 +23,6 @@ class ContourTiler
     sf::Vector2i mousePos;
     sf::RectangleShape zoomShape;
 
-    sf::RectangleShape exclusionShape;
-    bool hideExclusionShape;
-
     double leftOffset;
     double topOffset;
     double effectiveSize;
@@ -37,7 +34,6 @@ class ContourTiler
     bool isRendering;
     sf::Time rasterStartTime;
     LineStripLoader lineStripLoader;
-    QuadExclusions quadExclusions;
 
     double* linesBuffer;
     bool* coverBuffer;

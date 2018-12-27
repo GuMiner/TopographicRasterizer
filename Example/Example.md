@@ -50,8 +50,42 @@ This downloaded data covers more regional terrain than we are interested in and 
 ![QGIS12](./E16.PNG)
 
 ## Rasterizing Data
-TODO
+### Generating Rasters
+To rasterize the data, we'll use this application. To start, download and unzip the latest release from TODO.
+
+There are a number of tool options, but we'll use the default settings. This will cause the application to generate a 10x10 grid of 800x800 pixel images. These images will be stored in a 'rasters' folder in the same directory where we run it.
+
+Open a command prompt and run the following, replacing the file name with the GeoJSON file exported earlier:
+    
+    .\ContourTiler.exe MtBaker_file.geojson --Feature CONTOURELE
+    
+Notably, we exported the data with the elevation in the 'CONTOURELE' feature instead of the default 'Elevation' feature
+
+ContourTiler will load the data, output statistics, and open up a rendered preview of the terrain.
+
+![ContourTiler](./C1.PNG)
+
+The console lists a series of commands you can run using this display, such as typing **L** to render contours, **C** to render a color spectrum, etc.
+
+We don't need to zoom to any particular feature, so press **P** to start bulk processing. Wait for the output console to say **Tiling and rasterization done!**
+
+In the meantime, image files will be generated and stored in the **rasters** folder next to the application.
+
+Once complete, you can close the application but should keep the console window open.
+
+### Combinging Rasters
+By default, the rasters are separated into many files for efficient loading in video games. To 3D print a model, we have to combine them all together.
+
+To do so, run the following PowerShell script in the same console window
+
+    TODO copy over script
+
 ## Generating 3D models
+Once we have a single image file, we can load it into TODO to convert it into a 3D model.
+
 TODO
+
 ## 3D Printing
+With the 3D model, we can generate code to send it to the 3D printer.
+
 TODO

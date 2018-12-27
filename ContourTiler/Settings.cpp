@@ -182,7 +182,7 @@ void Settings::OutputUsage()
     std::cout << " --RegionCount [Count]: Specifies the amount of tiling applied to the region. Defaults to 10 (which means 10x10 or 100 tiles are created)." << std::endl;
     std::cout << " --RegionSize [Size]: Specifies the size of each image created. Defaults to 800 (800x800 pixel images)." << std::endl;
     std::cout << "     This value should be around the size of your monitor, because the overview image is *also* rendered at this resolution. Use a higher region count if you need more detail." << std::endl;
-    std::cout << " --OutputFolder [Folder]: Specifies the output folder rasterized images are placed. Defaults to 'rasters' (relative to the application)." << std::endl;
+    std::cout << " --OutputFolder [Folder]: Specifies the output folder rasterized images are placed. Defaults to 'rasters' (relative to the application). This folder must *not* exist." << std::endl;
     std::cout << " --LowResolution: Stores geometry data in 32-bit format. Useful for low-memory or large geometry regions. The default is high-resolution." << std::endl;
     std::cout << "Output Format:" << std::endl;
     std::cout << "  The rasterized, selected region is tiled into [RegionCount]x[RegionCount] images, each [RegionSize]x[RegionSize] in size." << std::endl;

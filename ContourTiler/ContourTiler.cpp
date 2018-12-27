@@ -277,15 +277,35 @@ void ContourTiler::Render(sf::RenderWindow& window, sf::Time elapsedTime)
                 // Create a new folder for the current region.
                 if (regionX == 0)
                 {
+                    // Base output folder
+                    if (regionY == 0)
+                    {
+                        std::stringstream folder;
+                        folder << ".\\" << settings->OutputFolder.c_str();
+                        if (_mkdir(folder.str().c_str()) != 0)
+                        {
+                            std::cout << "Unable to create directory '" << folder.str().c_str() << "'. This application will not overwrite existing folders or may not have permission." << std::endl;
+                            isBulkProcessing = false;
+                            return;
+                        }
+                    }
+
+                    // Y-index folders.
                     std::stringstream folder;
-                    folder << ".\\" << settings->OutputFolder << "\\" << regionY;
-                    _mkdir(folder.str().c_str());
+                    folder << ".\\" << settings->OutputFolder.c_str() << "\\" << regionY;
+                    if (_mkdir(folder.str().c_str()) != 0)
+                    {
+                        std::cout << "Unable to create directory '" << folder.str().c_str() << "'. This application will not overwrite existing folders or may not have permission." << std::endl;
+                        isBulkProcessing = false;
+                        return;
+                    }
+
                     std::cout << "Making directory " << folder.str().c_str() << std::endl;
                 }
 
                 // Save out our current data
                 std::stringstream file;
-                file << settings->OutputFolder << "/" << regionY << "/" << regionX << ".png";
+                file << settings->OutputFolder.c_str() << "/" << regionY << "/" << regionX << ".png";
 
                 unsigned char* data = new unsigned char[settings->RegionSize * settings->RegionSize * 4];
                 for (int i = 0; i < settings->RegionSize; i++)
@@ -309,7 +329,7 @@ void ContourTiler::Render(sf::RenderWindow& window, sf::Time elapsedTime)
                 int result = stbi_write_png(file.str().c_str(), settings->RegionSize, settings->RegionSize, RGBA, &data[0], settings->RegionSize * 4 * sizeof(unsigned char));
                 if (result != 0)
                 {
-                    std::cout << "Failed to write a file: " << result << " for raster " << regionX << ", " << regionY << std::endl;
+                    std::cout << "  Possible failure writing to file: " << result << " for raster " << regionX << ", " << regionY << std::endl;
                 }
                 
                 std::cout << "Wrote the file " << regionX << ", " << regionY << std::endl;

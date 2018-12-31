@@ -30,7 +30,7 @@ class Rasterizer
     double FindClosestPoint(Point point);
 
     // Rasterizes a range of columns to improve perf.
-    void RasterizeColumnRange(double leftOffset, double topOffset, double effectiveSize, int startColumn, int columnCount, double** rasterStore, double* minElevation, double* maxElevation);
+    void RasterizeColumnRange(double leftOffset, double topOffset, double effectiveSize, int startColumn, int columnCount, double** rasterStore);
 
     // Rasterizes a range of lines to improve perf.
     void RasterizeLineColumnRange(double leftOffset, double topOffset, double effectiveSize, int startColumn, int columnCount, double** rasterStore);
@@ -42,7 +42,7 @@ public:
     void Setup(Settings* settings);
 
     // Rasterizes the area, filling in the raster store.
-    void Rasterize(double leftOffset, double topOffset, double effectiveSize, double** rasterStore, double minElevation, double maxElevation);
+    void Rasterize(double leftOffset, double topOffset, double effectiveSize, double** rasterStore);
 
     // Rasterizes in lines with full whiteness.
     void LineRaster(double leftOffset, double topOffset, double effectiveSize, double** rasterStore);

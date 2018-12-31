@@ -9,28 +9,26 @@
 #include "CloseContourRanker.h"
 #include "Rasterizer.h"
 
-double toggle;
 std::mutex logMutex;
 
 Rasterizer::Rasterizer(LineStripLoader* lineStripLoader)
     : lineStrips(lineStripLoader), quadtree()
 {
-    toggle = 0;
 }
 
-
+// Map the given (normalized) points to 0-(size - 1( (defaults to 0-9) for block-based lookup.
 sf::Vector2i Rasterizer::GetQuadtreeSquare(Point givenPoint)
 {
     return sf::Vector2i(
-        std::min((int)(givenPoint.x * (double)size + toggle), size - 1),
-        std::min((int)(givenPoint.y * (double)size + toggle), size - 1));
+        std::min((int)(givenPoint.x * (double)size), size - 1),
+        std::min((int)(givenPoint.y * (double)size), size - 1));
 }
 
 sf::Vector2i Rasterizer::GetQuadtreeSquare(LowResPoint givenPoint)
 {
     return sf::Vector2i(
-        std::min((int)(givenPoint.x * (float)size + toggle), size - 1),
-        std::min((int)(givenPoint.y * (float)size + toggle), size - 1));
+        std::min((int)(givenPoint.x * (float)size), size - 1),
+        std::min((int)(givenPoint.y * (float)size), size - 1));
 }
 
 void Rasterizer::Setup(Settings* settings)
@@ -42,6 +40,7 @@ void Rasterizer::Setup(Settings* settings)
     quadtree.InitializeQuadtree(this->size);
 
     // Now fill in all the quadtree files with the indexes of all the lines within the area.
+    // TODO: This *has* to include lines that pass through, but don't end in regions.
     for (int i = 0; i < lineStrips->lineStrips.size(); i++)
     {
         if (this->settings->IsHighResolution)
@@ -80,14 +79,11 @@ void Rasterizer::Setup(Settings* settings)
             }
         }
 
-        if (i % lineStrips->lineStrips.size() / 10 == 0)
+        if (i % (lineStrips->lineStrips.size() / 10) == 0)
         {
             std::cout << "  Processed line strip " << i << " of " << lineStrips->lineStrips.size() << std::endl;
         }
-
     }
-
-    toggle = 0;
 
     std::cout << "Quadtree initialized!" << std::endl;
 }
@@ -148,7 +144,7 @@ double Rasterizer::GetLineDistanceSqd(Index idx, Point point)
 void Rasterizer::AddIfValid(int xP, int yP, std::vector<sf::Vector2i>& searchQuads)
 {
     sf::Vector2i pt(xP, yP);
-    if (xP >= 0 && yP >= 0 && xP < size && yP < size && quadtree.QuadSize(pt) != 0)
+    if (xP >= 0 && yP >= 0 && xP < size && yP < size && quadtree.ElementsInQuad(pt) != 0)
     {
         searchQuads.push_back(sf::Vector2i(xP, yP));
     }
@@ -184,7 +180,7 @@ double Rasterizer::FindClosestPoint(Point point)
     int gridDistance = 1;
     std::vector<sf::Vector2i> searchQuads;
 
-    int maxIterations = 90;
+    int maxIterations = 90; // Also empirical, works ok.
     bool foundAPoint = false;
     int overrun = 0;
     const int overrunLimit = 5; // Empirically determined to be 'ok'
@@ -198,7 +194,7 @@ double Rasterizer::FindClosestPoint(Point point)
 
         for (int k = 0; k < searchQuads.size(); k++)
         {
-            int indexCount = (int)quadtree.QuadSize(searchQuads[k]);
+            int indexCount = (int)quadtree.ElementsInQuad(searchQuads[k]);
             for (size_t i = 0; i < indexCount; i++)
             {
                 Index index = quadtree.GetIndexFromQuad(searchQuads[k], (int)i);
@@ -207,6 +203,7 @@ double Rasterizer::FindClosestPoint(Point point)
                 nextLine.elevation = (double)lineStrips->lineStrips[index.stripIdx].elevation;
                 if (nextLine.distanceSqd < 1e-12)
                 {
+                    // Exit early if we're effectively right on the line.
                     return nextLine.elevation;
                 }
 
@@ -231,11 +228,12 @@ double Rasterizer::FindClosestPoint(Point point)
         ++gridDistance;
     }
 
+    // Return something invalid if we never found a line.
     return 2e8;
 }
 
 // Rasterizes a range of columns to improve perf.
-void Rasterizer::RasterizeColumnRange(double leftOffset, double topOffset, double effectiveSize, int startColumn, int columnCount, double** rasterStore, double* minElevation, double* maxElevation)
+void Rasterizer::RasterizeColumnRange(double leftOffset, double topOffset, double effectiveSize, int startColumn, int columnCount, double** rasterStore)
 {
     for (int i = startColumn; i < startColumn + columnCount; i++)
     {
@@ -247,16 +245,6 @@ void Rasterizer::RasterizeColumnRange(double leftOffset, double topOffset, doubl
             Point point(x, y);
             double elevation = FindClosestPoint(point);
             (*rasterStore)[i + j * size] = elevation;
-
-            if (elevation < *minElevation)
-            {
-                *minElevation = elevation;
-            }
-
-            if (elevation > *maxElevation)
-            {
-                *maxElevation = elevation;
-            }
         }
     }
 
@@ -266,26 +254,21 @@ void Rasterizer::RasterizeColumnRange(double leftOffset, double topOffset, doubl
     logMutex.unlock();
 }
 
-void Rasterizer::Rasterize(double leftOffset, double topOffset, double effectiveSize, double** rasterStore, double minElevation, double maxElevation)
+void Rasterizer::Rasterize(double leftOffset, double topOffset, double effectiveSize, double** rasterStore)
 {
     std::cout << "Region Rasterizing..." << std::endl;
 
-    minElevation = std::numeric_limits<double>::max();
-    maxElevation = std::numeric_limits<double>::lowest();
+    // Split apart rasterization across all cores - 1, or 7 if we can't find hardware cores.
+    unsigned int hardwareThreads = std::thread::hardware_concurrency();
+    int splitFactor = hardwareThreads < 3 ? 7 : hardwareThreads - 1;
 
-    const int splitFactor = 7;
-    double minElevations[splitFactor];
-    double maxElevations[splitFactor];
-    std::thread* threads[splitFactor];
+    std::thread** threads = new std::thread*[splitFactor];
 
     int range = size / splitFactor;
     for (int i = 0; i < splitFactor; i++)
     {
-        minElevations[i] = std::numeric_limits<double>::max();
-        maxElevations[i] = std::numeric_limits<double>::lowest();
-
         int actualRange = (i == splitFactor - 1) ? (size - range * splitFactor) + range : range;
-        threads[i] = new std::thread(&Rasterizer::RasterizeColumnRange, this, leftOffset, topOffset, effectiveSize, i * range, actualRange, rasterStore, &minElevations[i], &maxElevations[i]);
+        threads[i] = new std::thread(&Rasterizer::RasterizeColumnRange, this, leftOffset, topOffset, effectiveSize, i * range, actualRange, rasterStore);
     }
 
     for (int i = 0; i < splitFactor; i++)
@@ -294,20 +277,7 @@ void Rasterizer::Rasterize(double leftOffset, double topOffset, double effective
         delete threads[i];
     }
 
-    // Find the real min and max.
-    for (int i = 0; i < splitFactor; i++)
-    {
-        if (minElevations[i] < minElevation)
-        {
-            minElevation = minElevations[i];
-        }
-
-        if (maxElevations[i] > maxElevation)
-        {
-            maxElevation = maxElevations[i];
-        }
-    }
-
+    delete[] threads;
     std::cout << "Region Rasterization complete." << std::endl;
 }
 
@@ -316,17 +286,17 @@ void Rasterizer::RasterizeLineColumnRange(double leftOffset, double topOffset, d
 {
     for (int i = startColumn; i < startColumn + columnCount; i++)
     {
-        for (int j = 0; j < size; j++)
+        for (int j = 0; j < size; j++) // Column from top to bottom.
         {
             double x = leftOffset + ((double)i / (double)size) * effectiveSize;
             double y = topOffset + ((double)j / (double)size) * effectiveSize;
-            double wiggleDistSqd = pow(effectiveSize / (double)size, 2);
+            double wiggleDistSqd = pow(effectiveSize / (double)size, 2)*2;
 
             Point point(x, y);
             sf::Vector2i quadSquare = GetQuadtreeSquare(point);
 
             bool filled = false;
-            for (size_t k = 0; k < quadtree.QuadSize(quadSquare); k++)
+            for (size_t k = 0; k < quadtree.ElementsInQuad(quadSquare); k++)
             {
                 Index index = quadtree.GetIndexFromQuad(quadSquare, (int)k);
 
@@ -350,9 +320,12 @@ void Rasterizer::RasterizeLineColumnRange(double leftOffset, double topOffset, d
 void Rasterizer::LineRaster(double leftOffset, double topOffset, double effectiveSize, double** rasterStore)
 {
     std::cout << "Line Rasterizing..." << std::endl;
-    
-    const int splitFactor = 7;
-    std::thread* threads[splitFactor];
+ 
+    // Split apart rasterization across all cores - 1, or 7 if we can't find hardware cores.
+    unsigned int hardwareThreads = std::thread::hardware_concurrency();
+    int splitFactor = hardwareThreads < 3 ? 7 : hardwareThreads - 1;
+
+    std::thread** threads = new std::thread*[splitFactor];
 
     int range = size / splitFactor;
     for (int i = 0; i < splitFactor; i++)
@@ -367,5 +340,6 @@ void Rasterizer::LineRaster(double leftOffset, double topOffset, double effectiv
         delete threads[i];
     }
 
+    delete[] threads;
     std::cout << "Line rasterization complete." << std::endl;
 }

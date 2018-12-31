@@ -5,6 +5,7 @@
 #include <limits>
 #include <thread>
 #include <map>
+#include <set>
 #include <nlohmann/json.hpp>
 #include "LineStripLoader.h"
 
@@ -40,7 +41,7 @@ bool LineStripLoader::Initialize(Settings* settings)
                 return false;
             }
 
-            std::cout << "Loading GeoJSON file" << geojsonFile << "..." << std::endl;
+            std::cout << "Loading GeoJSON file '" << geojsonFile << "' ..." << std::endl;
             json geoJson;
             lsf >> geoJson;
             std::cout << "Loaded GeoJSON file." << std::endl;
@@ -125,7 +126,9 @@ bool LineStripLoader::Initialize(Settings* settings)
 
     long parsedPoints = 0;
 
+
     std::cout << "=== Importing Data ===" << std::endl;
+    std::set<double> uniqueElevations = std::set<double>();
     for (std::string geojsonFile : settings->GeoJsonFiles)
     {
         std::ifstream lsf(geojsonFile, std::ios::in | std::ios::binary);
@@ -136,56 +139,59 @@ bool LineStripLoader::Initialize(Settings* settings)
 
         std::cout << "Loading and normalizing features..." << std::endl;
         for (auto& feature : geoJson["features"])
+        {
+            double elevation = 0.0;
+            if (feature["properties"][settings->ElevationFeature.c_str()].is_number_integer())
             {
-                double elevation = 0.0;
-                if (feature["properties"][settings->ElevationFeature.c_str()].is_number_integer())
-                {
-                    elevation = int(feature["properties"][settings->ElevationFeature.c_str()].get<int>());
-                }
-                else // if (feature["properties"][settings->ElevationFeature.c_str()].is_number_float())
-                {
-                    elevation = feature["properties"][settings->ElevationFeature.c_str()].get<double>();
-                }
+                elevation = int(feature["properties"][settings->ElevationFeature.c_str()].get<int>());
+            }
+            else // if (feature["properties"][settings->ElevationFeature.c_str()].is_number_float())
+            {
+                elevation = feature["properties"][settings->ElevationFeature.c_str()].get<double>();
+            }
 
-                for (auto& lineSet : feature["geometry"]["coordinates"])
+            for (auto& lineSet : feature["geometry"]["coordinates"])
+            {
+                lineStrips.push_back(LineStrip());
+                size_t i = lineStrips.size() - 1;
+
+                lineStrips[i].elevation = (elevation - minElevation) / (maxElevation - minElevation);
+                uniqueElevations.emplace(lineStrips[i].elevation);
+
+                lineStrips[i].points.clear();
+                lineStrips[i].lowResPoints.clear();
+                for (auto& point : lineSet)
                 {
-                    lineStrips.push_back(LineStrip());
-                    size_t i = lineStrips.size() - 1;
+                    const double x = point[0];
+                    const double y = point[1];
+                    Point parsedPoint;
+                    parsedPoint.x = (x - minX) / (maxX - minX);
+                    parsedPoint.y = 1.0 - ((y - minY) / (maxY - minY));
 
-                    lineStrips[i].elevation = (elevation - minElevation) / (maxElevation - minElevation);
-
-                    lineStrips[i].points.clear();
-                    lineStrips[i].lowResPoints.clear();
-                    for (auto& point : lineSet)
+                    if (settings->IsHighResolution)
                     {
-                        const double x = point[0];
-                        const double y = point[1];
-                        Point parsedPoint;
-                        parsedPoint.x = (x - minX) / (maxX - minX);
-                        parsedPoint.y = (y - minY) / (maxY - minY);
+                        lineStrips[i].points.push_back(parsedPoint);
+                    }
+                    else
+                    {
+                        LowResPoint lrPoint;
+                        lrPoint.x = (float)parsedPoint.x;
+                        lrPoint.y = (float)parsedPoint.y;
+                        lineStrips[i].lowResPoints.push_back(lrPoint);
+                    }
 
-                        if (settings->IsHighResolution)
-                        {
-                            lineStrips[i].points.push_back(parsedPoint);
-                        }
-                        else
-                        {
-                            LowResPoint lrPoint;
-                            lrPoint.x = (float)parsedPoint.x;
-                            lrPoint.y = (float)parsedPoint.y;
-                            lineStrips[i].lowResPoints.push_back(lrPoint);
-                        }
-
-                        ++parsedPoints;
-                        if (parsedPoints % (pointCount / 10) == 0)
-                        {
-                            std::cout << "  Point " << parsedPoints << " of " << pointCount << " loaded." << std::endl;
-                        }
+                    ++parsedPoints;
+                    if (parsedPoints % (pointCount / 10) == 0)
+                    {
+                        std::cout << "  Point " << parsedPoints << " of " << pointCount << " loaded." << std::endl;
                     }
                 }
             }
+        }
     }
 
+    // Useful for runtime diagnosis
+    std::cout << "Found " << uniqueElevations.size() << "unique elevations in the provided inputs." << std::endl;
     return true;
 }
 

@@ -21,7 +21,7 @@ void Quadtree::AddToIndex(sf::Vector2i quadtreePos, Index index)
     quadtree[quadtreePos.x + size * quadtreePos.y].push_back(index);
 }
 
-size_t Quadtree::QuadSize(sf::Vector2i quadtreePos) const
+size_t Quadtree::ElementsInQuad(sf::Vector2i quadtreePos) const
 {
     return quadtree[quadtreePos.x + size * quadtreePos.y].size();
 }

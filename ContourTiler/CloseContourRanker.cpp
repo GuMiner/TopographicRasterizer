@@ -1,6 +1,9 @@
 #include <cmath>
 #include "CloseContourRanker.h"
 
+// Because elevation is normalized, this should be rather small.
+constexpr double IDENTICAL_ELEVATION = 1e-20;;
+
 CloseContourRanker::CloseContourRanker()
     : closestLine(CloseContourLine()), secondClosestLine(CloseContourLine()), thirdClosestLine(CloseContourLine())
 {
@@ -8,7 +11,7 @@ CloseContourRanker::CloseContourRanker()
 
 bool CloseContourRanker::ResortIfIdentical(CloseContourLine contourLine)
 {
-    if (std::abs(closestLine.elevation - contourLine.elevation) < 0.001f)
+    if (std::abs(closestLine.elevation - contourLine.elevation) < IDENTICAL_ELEVATION)
     {
         // Identical, resorting done.
         if (contourLine.distanceSqd < closestLine.distanceSqd)
@@ -18,7 +21,7 @@ bool CloseContourRanker::ResortIfIdentical(CloseContourLine contourLine)
 
         return true;
     }
-    else if (std::abs(secondClosestLine.elevation - contourLine.elevation) < 0.001f)
+    else if (std::abs(secondClosestLine.elevation - contourLine.elevation) < IDENTICAL_ELEVATION)
     {
         if (contourLine.distanceSqd < secondClosestLine.distanceSqd)
         {
@@ -35,7 +38,7 @@ bool CloseContourRanker::ResortIfIdentical(CloseContourLine contourLine)
 
         return true;
     }
-    else if (std::abs(thirdClosestLine.elevation - contourLine.elevation) < 0.001f)
+    else if (std::abs(thirdClosestLine.elevation - contourLine.elevation) < IDENTICAL_ELEVATION)
     {
         if (contourLine.distanceSqd < thirdClosestLine.distanceSqd)
         {

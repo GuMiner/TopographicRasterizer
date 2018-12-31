@@ -204,7 +204,7 @@ void ContourTiler::SetupGraphicsElements()
 void ContourTiler::FillOverallTexture()
 {
     // Rasterize
-    rasterizer.Rasterize(leftOffset, topOffset, effectiveSize, &rasterizationBuffer, 0, 1); // min elevation, max elevation
+    rasterizer.Rasterize(leftOffset, topOffset, effectiveSize, &rasterizationBuffer);
     rasterizer.LineRaster(leftOffset, topOffset, effectiveSize, &linesBuffer);
 
     UpdateTextureFromBuffer();
@@ -417,6 +417,7 @@ void ContourTiler::Run(Settings* settings)
 int main(int argc, const char* argv[])
 {
     std::cout << "ContourTiler" << std::endl;
+    std::cout << "  Detected " << std::thread::hardware_concurrency() << " hardware cores." << std::endl;
     Settings settings;
     if (settings.ParseArguments(argc, argv))
     {

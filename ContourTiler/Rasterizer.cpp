@@ -25,6 +25,7 @@ void Rasterizer::Setup(Settings* settings)
     quadtree.InitializeQuadtree(this->size);
 
     // Now fill in all the quadtree files with the indexes of all the lines within the area.
+    std::cout << "  Populating with " << lineStrips->lineStrips.size() << " line strips..." << std::endl;
     for (int i = 0; i < lineStrips->lineStrips.size(); i++)
     {
         if (this->settings->IsHighResolution)
@@ -36,7 +37,7 @@ void Rasterizer::Setup(Settings* settings)
             AddPointsToQuadtree(i, lineStrips->lineStrips[i].lowResPoints);
         }
 
-        if (i % (lineStrips->lineStrips.size() / 10) == 0)
+        if (lineStrips->lineStrips.size() / 10 != 0 && (i % (lineStrips->lineStrips.size() / 10)) == 0)
         {
             std::cout << "  Processed line strip " << i << " of " << lineStrips->lineStrips.size() << std::endl;
         }
@@ -137,7 +138,7 @@ double Rasterizer::FindClosestPoint(Point point)
     int gridDistance = 1;
     std::vector<sf::Vector2i> searchQuads;
 
-    int maxIterations = 9; // Also empirical, works ok.
+    int maxIterations = 90; // Also empirical, works ok.
     bool foundAPoint = false;
     CloseContourRanker contourRanker = CloseContourRanker();
     CloseContourLine nextLine;

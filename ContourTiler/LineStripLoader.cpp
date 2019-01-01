@@ -191,7 +191,7 @@ bool LineStripLoader::Initialize(Settings* settings)
     }
 
     // Useful for runtime diagnosis
-    std::cout << "Found " << uniqueElevations.size() << "unique elevations in the provided inputs." << std::endl;
+    std::cout << "Found " << uniqueElevations.size() << " unique elevations in the provided inputs." << std::endl;
     return true;
 }
 

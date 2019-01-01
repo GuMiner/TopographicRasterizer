@@ -37,8 +37,6 @@ class Rasterizer
 
             // Add where the line intersects to the quadtree, iterating in the length where our V1 algorithm works.
             sf::Vector2i distance = quadEnd - quadStart;
-
-
             if (quadEnd.x == quadStart.x && quadEnd.y == quadStart.y)
             {
                 continue;
@@ -49,15 +47,15 @@ class Rasterizer
                 int x = quadStart.x;
                 const int increment = quadStart.x < quadEnd.x ? 1 : -1;
                 const float yDelta = (float)distance.y / (float)std::abs(distance.x);
-
+            
                 int currentX = 0;
                 while (x != quadEnd.x)
                 {
                     x += increment;
                     ++currentX;
-
+            
                     int y = (int)(yDelta * currentX + quadStart.y);
-
+            
                     // V1: Add to both Y plus and minus 1 to be pessimistic
                     quadtree.AddToIndex(sf::Vector2i(x, y), index);
                     quadtree.AddToIndex(sf::Vector2i(x, y + 1), index);
@@ -70,15 +68,15 @@ class Rasterizer
                 int y = quadStart.y;
                 const int increment = quadStart.y < quadEnd.y ? 1 : -1;
                 const float xDelta = (float)distance.x / (float)std::abs(distance.y);
-
+            
                 int currentY = 0;
                 while (y != quadEnd.y)
                 {
                     y += increment;
                     ++currentY;
-
-                    int x = (int)(xDelta * currentY + quadStart.y);
-
+            
+                    int x = (int)(xDelta * currentY + quadStart.x);
+            
                     // V1: Add to both X plus and minus 1 to be pessimistic
                     quadtree.AddToIndex(sf::Vector2i(x, y), index);
                     quadtree.AddToIndex(sf::Vector2i(x + 1, y), index);

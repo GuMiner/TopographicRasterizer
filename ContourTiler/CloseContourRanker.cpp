@@ -2,7 +2,7 @@
 #include "CloseContourRanker.h"
 
 // Because elevation is normalized, this should be rather small.
-constexpr double IDENTICAL_ELEVATION = 1e-20;;
+constexpr double IDENTICAL_ELEVATION = 1e-20;
 
 CloseContourRanker::CloseContourRanker()
     : closestLine(CloseContourLine()), secondClosestLine(CloseContourLine()), thirdClosestLine(CloseContourLine())

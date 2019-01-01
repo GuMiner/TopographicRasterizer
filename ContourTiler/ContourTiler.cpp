@@ -235,10 +235,20 @@ void ContourTiler::UpdateTextureFromBuffer()
             }
 
             // Lines buffer modification, only if applicable.
-            if (this->renderContours && linesBuffer[i + j * settings->RegionSize] > 0.5)
+            if (this->renderContours && linesBuffer[i + j * settings->RegionSize] > 0.50)
             {
-                pixels[pixelIdx] = std::min(255, pixels[pixelIdx] + 50);
-                pixels[pixelIdx + 1] = std::min(255, pixels[pixelIdx] + 50);
+                // Overlay green by default
+                if (linesBuffer[i + j * settings->RegionSize] < 0.80)
+                {
+                    // Overlay blue for direct points
+                    pixels[pixelIdx] = std::min(255, pixels[pixelIdx] + 50);
+                    // pixels[pixelIdx + 1] = std::min(255, pixels[pixelIdx] + 50);
+                }
+                else
+                {
+                    pixels[pixelIdx] = std::min(255, pixels[pixelIdx] + 50);
+                    pixels[pixelIdx + 1] = std::min(255, pixels[pixelIdx] + 50);
+                }
             }
 
             pixels[pixelIdx + 3] = 255;

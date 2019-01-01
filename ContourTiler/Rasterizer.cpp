@@ -16,21 +16,6 @@ Rasterizer::Rasterizer(LineStripLoader* lineStripLoader)
 {
 }
 
-// Map the given (normalized) points to 0-(size - 1( (defaults to 0-9) for block-based lookup.
-sf::Vector2i Rasterizer::GetQuadtreeSquare(Point givenPoint)
-{
-    return sf::Vector2i(
-        std::min((int)(givenPoint.x * (double)size), size - 1),
-        std::min((int)(givenPoint.y * (double)size), size - 1));
-}
-
-sf::Vector2i Rasterizer::GetQuadtreeSquare(LowResPoint givenPoint)
-{
-    return sf::Vector2i(
-        std::min((int)(givenPoint.x * (float)size), size - 1),
-        std::min((int)(givenPoint.y * (float)size), size - 1));
-}
-
 void Rasterizer::Setup(Settings* settings)
 {
     this->settings = settings;
@@ -40,43 +25,15 @@ void Rasterizer::Setup(Settings* settings)
     quadtree.InitializeQuadtree(this->size);
 
     // Now fill in all the quadtree files with the indexes of all the lines within the area.
-    // TODO: This *has* to include lines that pass through, but don't end in regions.
     for (int i = 0; i < lineStrips->lineStrips.size(); i++)
     {
         if (this->settings->IsHighResolution)
         {
-            std::vector<Point>& points = lineStrips->lineStrips[i].points;
-            for (unsigned int j = 0; j < points.size() - 1; j++)
-            {
-                sf::Vector2i quadStart = GetQuadtreeSquare(points[j]);
-                sf::Vector2i quadEnd = GetQuadtreeSquare(points[j + 1]);
-                Index index(i, j);
-
-                quadtree.AddToIndex(quadStart, index);
-
-                if (quadEnd.x != quadStart.x || quadEnd.y != quadStart.y)
-                {
-                    quadtree.AddToIndex(quadEnd, index);
-                }
-            }
+            AddPointsToQuadtree(i, lineStrips->lineStrips[i].points);
         }
         else
         {
-            // TODO: Deduplicate
-            std::vector<LowResPoint>& points = lineStrips->lineStrips[i].lowResPoints;
-            for (unsigned int j = 0; j < points.size() - 1; j++)
-            {
-                sf::Vector2i quadStart = GetQuadtreeSquare(points[j]);
-                sf::Vector2i quadEnd = GetQuadtreeSquare(points[j + 1]);
-                Index index(i, j);
-
-                quadtree.AddToIndex(quadStart, index);
-
-                if (quadEnd.x != quadStart.x || quadEnd.y != quadStart.y)
-                {
-                    quadtree.AddToIndex(quadEnd, index);
-                }
-            }
+            AddPointsToQuadtree(i, lineStrips->lineStrips[i].lowResPoints);
         }
 
         if (i % (lineStrips->lineStrips.size() / 10) == 0)
@@ -180,10 +137,8 @@ double Rasterizer::FindClosestPoint(Point point)
     int gridDistance = 1;
     std::vector<sf::Vector2i> searchQuads;
 
-    int maxIterations = 90; // Also empirical, works ok.
+    int maxIterations = 9; // Also empirical, works ok.
     bool foundAPoint = false;
-    int overrun = 0;
-    const int overrunLimit = 5; // Empirically determined to be 'ok'
     CloseContourRanker contourRanker = CloseContourRanker();
     CloseContourLine nextLine;
     while (maxIterations > 0)
@@ -199,6 +154,7 @@ double Rasterizer::FindClosestPoint(Point point)
             {
                 Index index = quadtree.GetIndexFromQuad(searchQuads[k], (int)i);
                 
+                nextLine.populated = true;
                 nextLine.distanceSqd = GetLineDistanceSqd(index, point);
                 nextLine.elevation = (double)lineStrips->lineStrips[index.stripIdx].elevation;
                 if (nextLine.distanceSqd < 1e-12)
@@ -208,24 +164,23 @@ double Rasterizer::FindClosestPoint(Point point)
                 }
 
                 // Add to the ranker, which manages priority of lines.
-                nextLine.populated = true;
                 contourRanker.AddElevationToRank(nextLine);
                 foundAPoint = true;
             }
         }
 
-        if (foundAPoint && (overrun >= overrunLimit || contourRanker.FilledSufficientLines()))
+        if (foundAPoint && contourRanker.FilledSufficientLines())
         {
             return contourRanker.GetWeightedElevation();
-        }
-        else if (foundAPoint)
-        {
-            // Overrun a few times to account for edge quadtree conditions. We overrun at least once if we're near a boundary zone.
-            ++overrun;
         }
 
         // Increment the grids we search.
         ++gridDistance;
+    }
+
+    if (foundAPoint)
+    {
+        return contourRanker.GetWeightedElevation();
     }
 
     // Return something invalid if we never found a line.
@@ -295,20 +250,64 @@ void Rasterizer::RasterizeLineColumnRange(double leftOffset, double topOffset, d
             Point point(x, y);
             sf::Vector2i quadSquare = GetQuadtreeSquare(point);
 
-            bool filled = false;
+            bool onPoint = false;
             for (size_t k = 0; k < quadtree.ElementsInQuad(quadSquare); k++)
             {
                 Index index = quadtree.GetIndexFromQuad(quadSquare, (int)k);
 
-                double lineDistSqd = GetLineDistanceSqd(index, point);
-                if (lineDistSqd < wiggleDistSqd)
+                if (this->settings->IsHighResolution)
                 {
-                    filled = true;
-                    break;
+                    Point start = lineStrips->lineStrips[index.stripIdx].points[index.pointIdx];
+                    Point end = lineStrips->lineStrips[index.stripIdx].points[index.pointIdx + 1];
+
+                    if (std::pow(start.x - point.x, 2) + std::pow(start.y - point.y, 2) < wiggleDistSqd)
+                    {
+                        onPoint = true;
+                        break;
+                    }
+
+                    if (std::pow(end.x - point.x, 2) + std::pow(end.y - point.y, 2) < wiggleDistSqd)
+                    {
+                        onPoint = true;
+                        break;
+                    }
+                }
+                else
+                {
+                    LowResPoint start = lineStrips->lineStrips[index.stripIdx].lowResPoints[index.pointIdx];
+                    LowResPoint end = lineStrips->lineStrips[index.stripIdx].lowResPoints[index.pointIdx + 1];
+
+                    if (std::pow(start.x - point.x, 2) + std::pow(start.y - point.y, 2) < wiggleDistSqd)
+                    {
+                        onPoint = true;
+                        break;
+                    }
+
+                    if (std::pow(end.x - point.x, 2) + std::pow(end.y - point.y, 2) < wiggleDistSqd)
+                    {
+                        onPoint = true;
+                        break;
+                    }
                 }
             }
 
-            (*rasterStore)[i + j * size] = filled ? 1 : 0;
+            bool filled = false;
+            if (!onPoint)
+            {
+                for (size_t k = 0; k < quadtree.ElementsInQuad(quadSquare); k++)
+                {
+                    Index index = quadtree.GetIndexFromQuad(quadSquare, (int)k);
+
+                    double lineDistSqd = GetLineDistanceSqd(index, point);
+                    if (lineDistSqd < wiggleDistSqd)
+                    {
+                        filled = true;
+                        break;
+                    }
+                }
+            }
+
+            (*rasterStore)[i + j * size] = onPoint ? 0.75 : (filled ? 1 : 0);
         }
     }
 

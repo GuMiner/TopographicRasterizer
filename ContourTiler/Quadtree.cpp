@@ -18,6 +18,16 @@ void Quadtree::InitializeQuadtree(int size)
 
 void Quadtree::AddToIndex(sf::Vector2i quadtreePos, Index index)
 {
+    if (quadtreePos.x < 0 || quadtreePos.y < 0)
+    {
+        return;
+    }
+
+    if (quadtreePos.x >= size || quadtreePos.y >= size)
+    {
+        return;
+    }
+
     quadtree[quadtreePos.x + size * quadtreePos.y].push_back(index);
 }
 

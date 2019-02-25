@@ -5,7 +5,6 @@
     <ClInclude Include="Quadtree.h" />
     <ClInclude Include="LineStripLoader.h" />
     <ClInclude Include="ContourTiler.h" />
-    <ClInclude Include="CloseContourRanker.h" />
     <ClInclude Include="Point.h">
       <Filter>dto</Filter>
     </ClInclude>
@@ -21,9 +20,9 @@
     <ClInclude Include="ColorMapper.h">
       <Filter>misc</Filter>
     </ClInclude>
+    <ClInclude Include="ElevationComputer.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="CloseContourRanker.cpp" />
     <ClCompile Include="ContourTiler.cpp" />
     <ClCompile Include="LineStripLoader.cpp" />
     <ClCompile Include="Quadtree.cpp" />
@@ -35,6 +34,7 @@
     <ClCompile Include="ColorMapper.cpp">
       <Filter>misc</Filter>
     </ClCompile>
+    <ClCompile Include="ElevationComputer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="dto">

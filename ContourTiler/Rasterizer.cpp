@@ -6,7 +6,7 @@
 #include <mutex>
 #include <immintrin.h>
 #include <xmmintrin.h>
-#include "CloseContourRanker.h"
+#include "ElevationComputer.h"
 #include "Rasterizer.h"
 
 std::mutex logMutex;
@@ -49,54 +49,21 @@ void Rasterizer::Setup(Settings* settings)
 // Same as the above but treats the index as a line.
 double Rasterizer::GetLineDistanceSqd(Index idx, Point point)
 {
+    Point closestPoint = Point();
     if (this->settings->IsHighResolution)
     {
         Point& start = lineStrips->lineStrips[idx.stripIdx].points[idx.pointIdx];
         Point& end = lineStrips->lineStrips[idx.stripIdx].points[idx.pointIdx + 1];
-
-        Point startToEnd(end.x - start.x, end.y - start.y);
-        double startEndLengthSqd = pow(startToEnd.x, 2) + pow(startToEnd.y, 2);
-
-        // Taking the dot product of the start-to-point vector with the (normalized) start-to-end vector.
-        Point startToPoint(point.x - start.x, point.y - start.y);
-        double projectionFraction = (startToPoint.x * startToEnd.x + startToPoint.y * startToEnd.y) / startEndLengthSqd;
-
-        if (projectionFraction > 0 && projectionFraction < 1)
-        {
-            Point closestPoint(start.x + startToEnd.x * projectionFraction, start.y + startToEnd.y * projectionFraction);
-            return pow(closestPoint.x - point.x, 2) + pow(closestPoint.y - point.y, 2);
-        }
-        else if (projectionFraction < 0)
-        {
-            return pow(startToPoint.x, 2) + pow(startToPoint.y, 2);
-        }
-
-        return pow(end.x - point.x, 2) + pow(end.y - point.y, 2);
+        ElevationComputer::GetClosestPointOnLine(point, start, end, &closestPoint);
     }
     else
     {
         LowResPoint& start = lineStrips->lineStrips[idx.stripIdx].lowResPoints[idx.pointIdx];
         LowResPoint& end = lineStrips->lineStrips[idx.stripIdx].lowResPoints[idx.pointIdx + 1];
-
-        LowResPoint startToEnd(end.x - start.x, end.y - start.y);
-        double startEndLengthSqd = pow(startToEnd.x, 2) + pow(startToEnd.y, 2);
-
-        // Taking the dot product of the start-to-point vector with the (normalized) start-to-end vector.
-        LowResPoint startToPoint((float)(point.x - start.x), (float)(point.y - start.y));
-        double projectionFraction = (startToPoint.x * startToEnd.x + startToPoint.y * startToEnd.y) / startEndLengthSqd;
-
-        if (projectionFraction > 0 && projectionFraction < 1)
-        {
-            LowResPoint closestPoint((float)(start.x + startToEnd.x * projectionFraction), (float)(start.y + startToEnd.y * projectionFraction));
-            return pow(closestPoint.x - point.x, 2) + pow(closestPoint.y - point.y, 2);
-        }
-        else if (projectionFraction < 0)
-        {
-            return pow(startToPoint.x, 2) + pow(startToPoint.y, 2);
-        }
-
-        return pow(end.x - point.x, 2) + pow(end.y - point.y, 2);
+        ElevationComputer::GetClosestPointOnLine(point, Point(start.x, start.y), Point(end.x, end.y), &closestPoint);
     }
+
+    return pow(point.x - closestPoint.x, 2) + pow(point.y - closestPoint.y, 2);
 }
 
 void Rasterizer::AddIfValid(int xP, int yP, std::vector<sf::Vector2i>& searchQuads)
@@ -130,7 +97,7 @@ void Rasterizer::AddAreasToSearch(int distance, sf::Vector2i startQuad, std::vec
     }
 }
 
-double Rasterizer::FindClosestPoint(Point point)
+double Rasterizer::ComputeElevation(Point point)
 {
     sf::Vector2i quadSquare = GetQuadtreeSquare(point);
 
@@ -138,54 +105,48 @@ double Rasterizer::FindClosestPoint(Point point)
     int gridDistance = 1;
     std::vector<sf::Vector2i> searchQuads;
 
-    int maxIterations = 90; // Also empirical, works ok.
-    bool foundAPoint = false;
-    CloseContourRanker contourRanker = CloseContourRanker();
-    CloseContourLine nextLine;
+    int maxIterations = 90; // Hard stop to handle edge cases where there won't be edge lines for the computer to find.
+    ElevationComputer elevationComputer = ElevationComputer(point);
     while (maxIterations > 0)
     {
         --maxIterations;
         searchQuads.clear();
         AddAreasToSearch(gridDistance, quadSquare, searchQuads);
 
+        // Iterate through each search region and each element in each region, processing the line with the computer
         for (int k = 0; k < searchQuads.size(); k++)
         {
             int indexCount = (int)quadtree.ElementsInQuad(searchQuads[k]);
             for (size_t i = 0; i < indexCount; i++)
             {
                 Index index = quadtree.GetIndexFromQuad(searchQuads[k], (int)i);
-                
-                nextLine.populated = true;
-                nextLine.distanceSqd = GetLineDistanceSqd(index, point);
-                nextLine.elevation = (double)lineStrips->lineStrips[index.stripIdx].elevation;
-                if (nextLine.distanceSqd < 1e-12)
+                LineStrip& lineStrip = lineStrips->lineStrips[index.stripIdx];
+
+                if (this->settings->IsHighResolution)
                 {
-                    // Exit early if we're effectively right on the line.
-                    return nextLine.elevation;
+                    Point start = lineStrip.points[index.pointIdx];
+                    Point end = lineStrip.points[index.pointIdx + 1];
+                    elevationComputer.ProcessLine(start, end, lineStrip.elevation);
                 }
-
-                // Add to the ranker, which manages priority of lines.
-                contourRanker.AddElevationToRank(nextLine);
-                foundAPoint = true;
+                else
+                {
+                    LowResPoint& start = lineStrip.lowResPoints[index.pointIdx];
+                    LowResPoint& end = lineStrip.lowResPoints[index.pointIdx + 1];
+                    elevationComputer.ProcessLine(Point((double)start.x, (double)start.y), Point((double)end.x, (double)end.y), lineStrip.elevation);
+                }
             }
-        }
 
-        if (foundAPoint && contourRanker.FilledSufficientLines())
-        {
-            return contourRanker.GetWeightedElevation();
+            if (elevationComputer.HasSufficientData())
+            {
+                return elevationComputer.GetWeightedElevation();
+            }
         }
 
         // Increment the grids we search.
         ++gridDistance;
     }
 
-    if (foundAPoint)
-    {
-        return contourRanker.GetWeightedElevation();
-    }
-
-    // Return something invalid if we never found a line.
-    return 2e8;
+    return elevationComputer.GetWeightedElevation();
 }
 
 // Rasterizes a range of columns to improve perf.
@@ -199,7 +160,7 @@ void Rasterizer::RasterizeColumnRange(double leftOffset, double topOffset, doubl
             double y = topOffset + ((double)j / (double)size) * effectiveSize;
 
             Point point(x, y);
-            double elevation = FindClosestPoint(point);
+            double elevation = ComputeElevation(point);
             (*rasterStore)[i + j * size] = elevation;
         }
     }

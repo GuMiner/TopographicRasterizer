@@ -86,7 +86,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="CloseContourRanker.cpp" />
+    <ClCompile Include="ElevationComputer.cpp" />
     <ClCompile Include="ColorMapper.cpp" />
     <ClCompile Include="ContourTiler.cpp" />
     <ClCompile Include="LineStripLoader.cpp" />
@@ -96,7 +96,7 @@
     <ClCompile Include="stb_implementations.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="CloseContourRanker.h" />
+    <ClInclude Include="ElevationComputer.h" />
     <ClInclude Include="ColorMapper.h" />
     <ClInclude Include="ContourTiler.h" />
     <ClInclude Include="LineStrip.h" />

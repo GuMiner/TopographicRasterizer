@@ -5,6 +5,7 @@
 
 include
 lib
+rasters
 
 # User-specific files
 *.suo

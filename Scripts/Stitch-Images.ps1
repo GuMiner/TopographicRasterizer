@@ -35,10 +35,8 @@ $newImage = New-Object 'System.Drawing.Bitmap' -ArgumentList $totalSize,$totalSi
 $graphics = [System.Drawing.Graphics]::FromImage($newImage)
 
 $x = 0
-foreach ($directory in [IO.Directory]::GetDirectories($SourceFolder))
+foreach ($subdirectory in [IO.Directory]::GetDirectories($SourceFolder))
 {
-    $subdirectory = [IO.Path]::Combine($DestinationFolder, [IO.Path]::GetFileName($directory))
-
     $y = 0
     foreach ($file in [IO.Directory]::GetFiles($subdirectory))
     {

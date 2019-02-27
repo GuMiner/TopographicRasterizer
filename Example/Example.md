@@ -93,7 +93,7 @@ Once the image is combined, we can then convert it from a 16-bit RG image to an 
 ## Generating 3D models
 Once we have a single image file, we can load it into [ClonerBox Image To 3D Converter](http://clonerbox.com/image_3D_converter.php) to convert it into a 3D model.
 
-TODO: Image of MtBaker in the editor
+![Image of MtBaker in the editor](./C2.PNG)
 
 Adjust all settings as desired.
 
@@ -102,4 +102,5 @@ Adjust all settings as desired.
 ## 3D Printing
 With the 3D model, we can generate code to send it to the 3D printer. Use your favorite tool to load the STL file and print it on your printer!
 
-TODO: Image of MtBaker 3D Printed
+![Image of MtBaker in the 3D printer simulator](./C3.PNG)
+![Image of MtBaker 3D printed](./C4.PNG)

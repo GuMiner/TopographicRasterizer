@@ -103,4 +103,4 @@ Adjust all settings as desired.
 With the 3D model, we can generate code to send it to the 3D printer. Use your favorite tool to load the STL file and print it on your printer!
 
 ![Image of MtBaker in the 3D printer simulator](./C3.PNG)
-![Image of MtBaker 3D printed](./C4.PNG)
+![Image of MtBaker 3D printed](./C4.JPG)

@@ -44,4 +44,6 @@ The STL file can then be 3D printed using your toolchain of choice.
 [Workflow Example](./Example/Example.md)
 
 ## Compilation / Dependencies
-[Building from the source](./Building.md)
+* Download [SFML](https://www.sfml-dev.org/) and [VS 2017 Community](https://visualstudio.microsoft.com/vs/community/).
+* Place the SFML libraries in a 'lib' folder and the include files in 'include\SFML' within the project hierarchy.
+* Open the project and build as usual.

@@ -98,8 +98,8 @@ class Rasterizer
     // Returns the height of the closest point to the specified coordinates.
     double ComputeElevation(Point point);
 
-    // Rasterizes a range of columns to improve perf.
-    void RasterizeColumnRange(double leftOffset, double topOffset, double effectiveSize, int startColumn, int columnCount, double** rasterStore);
+    // Rasterizes a single column to improve perf.
+    void RasterizeColumn(double leftOffset, double topOffset, double effectiveSize, int column, double** rasterStore, volatile bool* isRunning);
 
     // Rasterizes a range of lines to improve perf.
     void RasterizeLineColumnRange(double leftOffset, double topOffset, double effectiveSize, int startColumn, int columnCount, double** rasterStore);

@@ -150,25 +150,19 @@ double Rasterizer::ComputeElevation(Point point)
 }
 
 // Rasterizes a range of columns to improve perf.
-void Rasterizer::RasterizeColumnRange(double leftOffset, double topOffset, double effectiveSize, int startColumn, int columnCount, double** rasterStore)
+void Rasterizer::RasterizeColumn(double leftOffset, double topOffset, double effectiveSize, int column, double** rasterStore, volatile bool* isRunning)
 {
-    for (int i = startColumn; i < startColumn + columnCount; i++)
+    for (int j = 0; j < size; j++)
     {
-        for (int j = 0; j < size; j++)
-        {
-            double x = leftOffset + ((double)i / (double)size) * effectiveSize;
-            double y = topOffset + ((double)j / (double)size) * effectiveSize;
+        double x = leftOffset + ((double)column / (double)size) * effectiveSize;
+        double y = topOffset + ((double)j / (double)size) * effectiveSize;
 
-            Point point(x, y);
-            double elevation = ComputeElevation(point);
-            (*rasterStore)[i + j * size] = elevation;
-        }
+        Point point(x, y);
+        double elevation = ComputeElevation(point);
+        (*rasterStore)[column + j * size] = elevation;
     }
 
-    // Ensure log messages are rendered neatly.
-    logMutex.lock();
-    std::cout << "  Rasterization from " << startColumn << " to " << (startColumn + columnCount) << " complete." << std::endl;
-    logMutex.unlock();
+	*isRunning = false;
 }
 
 void Rasterizer::Rasterize(double leftOffset, double topOffset, double effectiveSize, double** rasterStore)
@@ -179,22 +173,90 @@ void Rasterizer::Rasterize(double leftOffset, double topOffset, double effective
     unsigned int hardwareThreads = std::thread::hardware_concurrency();
     int splitFactor = hardwareThreads < 3 ? 7 : hardwareThreads - 1;
 
+	// Split apart rasterization evenly across the image so immediate results appear sooner
+	// ... however also be smart enough to dedicate threads who complete their segment to new work.
     std::thread** threads = new std::thread*[splitFactor];
-
-    int range = size / splitFactor;
+	int* currentThreadColumn = new int[splitFactor];
+	volatile bool* threadsRunning = new bool[splitFactor];
+	bool* rasterizedColumns = new bool[size];
+	for (int i = 0; i < size; i++)
+	{
+		rasterizedColumns[i] = false;
+	}
+	
+	int columnSplitAmount = size / splitFactor;
     for (int i = 0; i < splitFactor; i++)
     {
-        int actualRange = (i == splitFactor - 1) ? (size - range * splitFactor) + range : range;
-        threads[i] = new std::thread(&Rasterizer::RasterizeColumnRange, this, leftOffset, topOffset, effectiveSize, i * range, actualRange, rasterStore);
+		int threadColumnOffset = i * columnSplitAmount;
+
+		threadsRunning[i] = true;
+		currentThreadColumn[i] = threadColumnOffset;
+		rasterizedColumns[currentThreadColumn[i]] = true;
+        threads[i] = new std::thread(&Rasterizer::RasterizeColumn, this, leftOffset, topOffset, effectiveSize, threadColumnOffset, rasterStore, &threadsRunning[i]);
     }
 
-    for (int i = 0; i < splitFactor; i++)
-    {
-        threads[i]->join();
-        delete threads[i];
-    }
+	bool columnsLeftToRasterize = true;
+	int rasterizedColumnCount = 0;
+	int lastPercent = -1;
+	while (columnsLeftToRasterize)
+	{
+		columnsLeftToRasterize = false;
+		std::this_thread::sleep_for(std::chrono::milliseconds(5));
+		for (int i = 0; i < splitFactor; i++)
+		{
+			// -1 == Used to represent dead threads (where there is only one column left and it already is being rasterized)
+			if (!threadsRunning[i] && currentThreadColumn[i] != -1)
+			{
+				threads[i]->join();
+				delete threads[i];
+
+				// Compute and log overall status
+				++rasterizedColumnCount;
+				int rasterizationPercent = (int)(rasterizedColumnCount * 100 / size);
+				if (rasterizationPercent % 10 == 0 && lastPercent != rasterizationPercent)
+				{
+					std::cout << "  Rasterization " << rasterizationPercent << "% complete." << std::endl;
+					lastPercent = rasterizationPercent;
+				}
+
+				// Find first thread segment to join to help, starting from where we are
+				int nextColumnToRasterize = currentThreadColumn[i] + 1;
+				if (nextColumnToRasterize >= size || rasterizedColumns[nextColumnToRasterize])
+				{
+					// We can't just advance, find a new segment to pile on.
+					nextColumnToRasterize = -1;
+					for (int j = 0; j < splitFactor; j++)
+					{
+						int nextPossibleColumn = currentThreadColumn[j] + 1;
+						if (nextPossibleColumn < size && !rasterizedColumns[nextPossibleColumn])
+						{
+							nextColumnToRasterize = nextPossibleColumn;
+							break;
+						}
+					}
+				}
+
+				currentThreadColumn[i] = nextColumnToRasterize;
+				if (nextColumnToRasterize != -1)
+				{
+					threadsRunning[i] = true;
+					rasterizedColumns[nextColumnToRasterize] = true;
+					threads[i] = new std::thread(&Rasterizer::RasterizeColumn, this, leftOffset, topOffset, effectiveSize, nextColumnToRasterize, rasterStore, &threadsRunning[i]);
+				}
+			}
+			
+			if (currentThreadColumn[i] != -1) // Use this instead of threadsRunning to avoid multithreading woes.
+			{
+				columnsLeftToRasterize = true;
+			}
+		}
+	}
+
 
     delete[] threads;
+	delete[] currentThreadColumn;
+	delete[] threadsRunning;
+	delete[] rasterizedColumns;
     std::cout << "Region Rasterization complete." << std::endl;
 }
 
